@@ -53,6 +53,11 @@ const requireAdmin = async (req: any, res: any, next: any) => {
 
 // --- Routes ---
 
+// Health Check Root Route
+app.get('/', (req, res) => {
+    res.send("MeroHisab Backend is Running. API endpoints are at /api/...");
+});
+
 // 1. Auth Routes
 app.post('/api/auth/register', async (req: any, res: any) => {
   const { 
@@ -377,7 +382,4 @@ app.use((req, res) => {
   res.status(404).json({ message: `Route ${req.method} ${req.url} not found` });
 });
 
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on http://192.168.1.64:${PORT}`);
-});
+app.listen(PORT, () => { console.log(`Server running on http://localhost:${PORT}`); });

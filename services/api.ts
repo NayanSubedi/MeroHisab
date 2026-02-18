@@ -1,22 +1,41 @@
+
 // API Service Configuration
-import { Capacitor } from '@capacitor/core';
 
-const getApiUrl = () => {
-  // 1. Check if running on a native device (Android or iOS)
-  if (Capacitor.isNativePlatform()) {
-    // IF EMULATOR: Use 10.0.2.2
-    // IF REAL DEVICE: Use your Computer's LAN IP (e.g., 192.168.1.64)
-    
-    // Suggestion: Just use your computer's LAN IP for everything native to be safe.
-    // Replace '192.168.1.64' with your actual PC IP address.
-    return "http://192.168.1.64:5000/api"; 
-  }
+// ---------------------------------------------------------------------------
+// IMPORTANT FOR RENDER DEPLOYMENT:
+// 
+// 1. Go to your Render Dashboard (dashboard.render.com).
+// 2. Select your Web Service.
+// 3. Copy the URL found at the top left (it looks like https://something.onrender.com).
+// 4. Paste it into the PROD_URL variable below.
+// ---------------------------------------------------------------------------
 
-  // 2. Running in Browser (localhost development)
-  return "http://localhost:5000/api";
-};
+const PROD_URL = 'https://merohisab-euxk.onrender.com/api'; // <--- REPLACE WITH YOUR RENDER URL
 
-export const API_URL = getApiUrl();
+// Fallback for local development
+const LOCAL_IP = '192.168.1.66'; // Your local computer IP
+const PORT = '5000';
+
+// Logic to select and sanitize the correct URL
+const isRenderUrlConfigured = PROD_URL.includes('onrender.com') && !PROD_URL.includes('your-app-name');
+
+let baseUrl = `http://${LOCAL_IP}:${PORT}/api`;
+
+if (isRenderUrlConfigured) {
+    // Remove trailing slashes
+    let url = PROD_URL.replace(/\/+$/, '');
+    // Auto-append /api if missing
+    if (!url.endsWith('/api')) {
+        url = `${url}/api`;
+    }
+    baseUrl = url;
+}
+
+// Use Environment variable if available (Production), otherwise use logic above
+const API_URL = (import.meta as any).env?.VITE_API_URL || baseUrl;
+
+console.log("Using API URL:", API_URL);
+
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
         const contentType = response.headers.get("content-type");

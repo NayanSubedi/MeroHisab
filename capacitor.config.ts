@@ -13,6 +13,7 @@ const config: CapacitorConfig = {
     allowNavigation: [
       "192.168.1.64", 
       "10.0.2.2"
+      
     ]
   }
 };
