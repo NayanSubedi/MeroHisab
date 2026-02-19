@@ -197,7 +197,7 @@ const BillUpload: React.FC<BillUploadProps> = ({ onAddTransaction, onCancel, tra
             
             <div className="mt-6 flex justify-center items-center space-x-2 text-xs text-gray-400">
                 <Aperture size={12}/>
-                <span>Powered by Gemini AI for Auto-Extraction</span>
+                <span>Powered by HisabAI</span>
             </div>
         </div>
       ) : (
