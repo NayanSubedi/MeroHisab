@@ -22,19 +22,27 @@ const isRenderUrlConfigured = PROD_URL.includes('onrender.com') && !PROD_URL.inc
 let baseUrl = `http://${LOCAL_IP}:${PORT}/api`;
 
 if (isRenderUrlConfigured) {
-    // Remove trailing slashes
-    let url = PROD_URL.replace(/\/+$/, '');
-    // Auto-append /api if missing
-    if (!url.endsWith('/api')) {
-        url = `${url}/api`;
-    }
-    baseUrl = url;
+    baseUrl = PROD_URL;
 }
 
-// Use Environment variable if available (Production), otherwise use logic above
-const API_URL = (import.meta as any).env?.VITE_API_URL || baseUrl;
+// 1. Determine base URL (Env > Render Config > Local Fallback)
+let determinedUrl = (import.meta as any).env?.VITE_API_URL || baseUrl;
 
-console.log("Using API URL:", API_URL);
+// 2. Sanitize: Remove trailing slashes
+determinedUrl = determinedUrl.replace(/\/+$/, '');
+
+// 3. FORCE append /api if not present
+// This fixes the "Route POST /auth/login not found" error by ensuring we hit /api/auth/login
+if (!determinedUrl.endsWith('/api')) {
+    determinedUrl = `${determinedUrl}/api`;
+}
+
+const API_URL = determinedUrl;
+
+console.log("-----------------------------------");
+console.log("FINAL API URL:", API_URL);
+console.log("If you see 404 errors, check if this URL is correct.");
+console.log("-----------------------------------");
 
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
@@ -55,6 +63,8 @@ const handleResponse = async (response: Response) => {
 export const api = {
   // Auth
   register: async (data: any) => {
+    // Debug log
+    console.log(`POST request to: ${API_URL}/auth/register`);
     const response = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -64,6 +74,8 @@ export const api = {
   },
 
   login: async (data: any) => {
+    // Debug log
+    console.log(`POST request to: ${API_URL}/auth/login`);
     const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
