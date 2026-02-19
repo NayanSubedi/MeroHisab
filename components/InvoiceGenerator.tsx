@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Printer, Download, Eye, QrCode, CreditCard, Banknote, Loader2, CheckSquare, Square, Search, FileText, AlertCircle, Trash2, X, Percent, Calendar, User, Phone, Plus, RefreshCw, MapPin, Hash, ChevronLeft, ChevronRight, ArrowLeft, Wallet } from 'lucide-react';
 import { InvoiceItem, BusinessProfile, Transaction, TransactionType, UnitType, InvoiceDetails, PaymentMethod } from '../types';
@@ -36,7 +35,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPan, setCustomerPan] = useState('');
   
-  // Validation State (Replaces Alert)
+  // Validation State
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -68,7 +67,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
     setItems([{ id: Date.now().toString(), description: '', unit: 'pcs', quantity: 1, rate: 0, amount: 0 }]);
     setDiscountPercentage('');
     setPaymentMethod('Cash');
-    setErrors({}); // Clear errors
+    setErrors({}); 
     generateNewInvoiceNumber();
   };
 
@@ -128,19 +127,16 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
 
   // --- Actions ---
   const handleSave = () => {
-    // UPDATED: Validation Logic
     const newErrors: { [key: string]: string } = {};
-    
     if (!customerName.trim()) {
         newErrors.customerName = "Customer Name is required";
     }
 
     if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
-        return; // Stop execution if errors exist
+        return; 
     }
 
-    // Clear errors and proceed
     setErrors({});
     setShowSaveConfirmation(true);
   };
@@ -177,79 +173,81 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
 
     onSaveInvoice(transaction);
     setShowSaveConfirmation(false);
-    
-    // Close mobile form if open
     setIsMobileFormOpen(false);
-
-    // Show preview, reset form, and jump to first page of history
     setSelectedInvoice(transaction);
     setShowPreviewModal(true);
     setCurrentPage(1); 
     resetForm();
   };
 
-  // --- FIXED PDF DOWNLOAD FUNCTION FOR MOBILE ---
+  // --- ROBUST MOBILE PDF DOWNLOAD FUNCTION ---
   const downloadPDF = async () => {
     setIsGeneratingPdf(true);
-    const element = document.getElementById('invoice-preview-content');
     
-    if (!element) {
-        setIsGeneratingPdf(false);
-        return;
-    }
-
     try {
-        // 1. CLONE THE ELEMENT
-        // We clone the element so we can manipulate it without affecting the UI.
+        const element = document.getElementById('invoice-preview-content');
+        if (!element) throw new Error("Invoice content not found");
+
+        // 1. Create a container specifically for PDF generation
+        // We set it to fixed/z-index -9999 so it's "visible" to the browser engine (rendering it),
+        // but hidden from the user. We force a standard A4 width (approx 794px).
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.top = '0';
+        container.style.left = '0';
+        container.style.width = '794px'; // Standard A4 width in pixels
+        container.style.zIndex = '-9999';
+        container.style.backgroundColor = '#ffffff';
+        container.style.padding = '20px'; // Add some padding
+
+        // 2. Clone the content
         const clone = element.cloneNode(true) as HTMLElement;
-
-        // 2. FORCE DESKTOP STYLING ON THE CLONE
-        // This solves the mobile issue. By forcing a fixed width (800px is roughly A4),
-        // html2canvas renders it as if it's on a PC, not a small phone screen.
-        clone.style.width = '800px';
+        
+        // 3. Force desktop-like styling on the clone to prevent mobile squashing
         clone.style.maxWidth = 'none';
-        clone.style.height = 'auto'; // Ensure full height captures
-        clone.style.position = 'absolute';
-        clone.style.top = '-9999px'; // Hide off-screen
-        clone.style.left = '-9999px';
-        clone.style.zIndex = '-1';
-        clone.style.background = 'white';
-        clone.style.color = 'black'; // Force black text (fixes dark mode issues)
-        clone.style.padding = '40px';
-
-        // 3. CLEAN UP DARK MODE CLASSES IN CLONE
-        // If the user is in dark mode, the clone might have white text. We force it to black.
-        const darkElements = clone.querySelectorAll('*');
-        darkElements.forEach((el: any) => {
-             el.style.color = 'black';
-             el.style.borderColor = '#e5e7eb'; // Light gray border
+        clone.style.width = '100%';
+        clone.style.height = 'auto';
+        clone.style.overflow = 'visible';
+        
+        // Ensure text is black (fix for dark mode issues)
+        const allNodes = clone.querySelectorAll('*');
+        allNodes.forEach((node: any) => {
+            node.style.color = '#000000';
+            if (node.style.borderColor) {
+                node.style.borderColor = '#cccccc';
+            }
         });
 
-        // 4. APPEND TO BODY
-        document.body.appendChild(clone);
+        container.appendChild(clone);
+        document.body.appendChild(container);
 
-        // 5. GENERATE PDF
+        // 4. Detect Mobile for Scaling
+        // Mobile browsers crash if the canvas is too huge. We lower the scale on mobile.
+        const isMobile = window.innerWidth < 768; 
+        const scaleAmount = isMobile ? 1.5 : 2;
+
         const opt = {
-            margin: 0.5,
+            margin: 0.3,
             filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { 
-                scale: 2, 
+                scale: scaleAmount, 
                 useCORS: true, 
-                scrollY: 0, // Critical for mobile to capture top
-                windowWidth: 850 // Trick library into thinking window is wide
+                logging: false,
+                windowWidth: 794, // Trick the engine into thinking screen is wide
+                scrollY: 0
             },
             jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
 
-        await html2pdf().set(opt).from(clone).save();
+        await html2pdf().set(opt).from(container).save();
+        
+        // Cleanup
+        document.body.removeChild(container);
 
-        // 6. CLEAN UP
-        document.body.removeChild(clone);
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("PDF Generation failed:", error);
-        alert("Could not generate PDF. Please try again.");
+        alert("Download failed: " + (error.message || "Unknown error"));
     } finally {
         setIsGeneratingPdf(false);
     }
