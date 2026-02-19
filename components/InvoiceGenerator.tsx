@@ -188,20 +188,71 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
     resetForm();
   };
 
-  const downloadPDF = () => {
+  // --- FIXED PDF DOWNLOAD FUNCTION FOR MOBILE ---
+  const downloadPDF = async () => {
     setIsGeneratingPdf(true);
     const element = document.getElementById('invoice-preview-content');
-    if (!element) return;
     
-    const opt = {
-      margin: 0.5,
-      filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-    
-    html2pdf().set(opt).from(element).save().then(() => setIsGeneratingPdf(false));
+    if (!element) {
+        setIsGeneratingPdf(false);
+        return;
+    }
+
+    try {
+        // 1. CLONE THE ELEMENT
+        // We clone the element so we can manipulate it without affecting the UI.
+        const clone = element.cloneNode(true) as HTMLElement;
+
+        // 2. FORCE DESKTOP STYLING ON THE CLONE
+        // This solves the mobile issue. By forcing a fixed width (800px is roughly A4),
+        // html2canvas renders it as if it's on a PC, not a small phone screen.
+        clone.style.width = '800px';
+        clone.style.maxWidth = 'none';
+        clone.style.height = 'auto'; // Ensure full height captures
+        clone.style.position = 'absolute';
+        clone.style.top = '-9999px'; // Hide off-screen
+        clone.style.left = '-9999px';
+        clone.style.zIndex = '-1';
+        clone.style.background = 'white';
+        clone.style.color = 'black'; // Force black text (fixes dark mode issues)
+        clone.style.padding = '40px';
+
+        // 3. CLEAN UP DARK MODE CLASSES IN CLONE
+        // If the user is in dark mode, the clone might have white text. We force it to black.
+        const darkElements = clone.querySelectorAll('*');
+        darkElements.forEach((el: any) => {
+             el.style.color = 'black';
+             el.style.borderColor = '#e5e7eb'; // Light gray border
+        });
+
+        // 4. APPEND TO BODY
+        document.body.appendChild(clone);
+
+        // 5. GENERATE PDF
+        const opt = {
+            margin: 0.5,
+            filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true, 
+                scrollY: 0, // Critical for mobile to capture top
+                windowWidth: 850 // Trick library into thinking window is wide
+            },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        await html2pdf().set(opt).from(clone).save();
+
+        // 6. CLEAN UP
+        document.body.removeChild(clone);
+
+    } catch (error) {
+        console.error("PDF Generation failed:", error);
+        alert("Could not generate PDF. Please try again.");
+    } finally {
+        setIsGeneratingPdf(false);
+    }
   };
 
   // --- Pagination Logic ---

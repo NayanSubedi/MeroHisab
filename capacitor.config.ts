@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.merohisab.app',
-  appName: 'MSME App',
+  appName: 'Mero Hisab',
   webDir: 'dist',
   server: {
     // 1. Force Android to use HTTP (fixes Mixed Content error)

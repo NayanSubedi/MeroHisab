@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './components/Layout';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
@@ -7,7 +8,7 @@ import InvoiceGenerator from './components/InvoiceGenerator';
 import Reports from './components/Reports';
 import UserManagement from './components/UserManagement';
 import AdminDashboard from './components/AdminDashboard';
-import AdminUsers from './components/AdminUsers'; // Import new component
+import AdminUsers from './components/AdminUsers';
 import ProfileSettings from './components/ProfileSettings';
 import DailyTransactions from './components/DailyTransactions';
 import { BusinessProfile, Transaction, TransactionType, ExpenseCategory, UserRole, User } from './types';
@@ -27,27 +28,51 @@ const App: React.FC = () => {
   // Local State for Staff
   const [staffList, setStaffList] = useState<User[]>([]);
 
+  // --- LOGOUT LOGIC ---
+  // Defined early so it can be used by fetchers upon 401 error
+  const handleLogout = useCallback(() => {
+    console.log("Logging out...");
+    localStorage.removeItem('token');
+    localStorage.removeItem('userProfile');
+    setIsAuthenticated(false);
+    setUserProfile(null);
+    setToken('');
+    setTransactions([]);
+    setStaffList([]);
+  }, []);
+
+  // --- DATA FETCHING ---
+
   // Fetch Transactions from API
-  const fetchTransactions = async (authToken: string) => {
+  const fetchTransactions = useCallback(async (authToken: string) => {
       try {
           const data = await api.getTransactions(authToken);
           setTransactions(data);
-      } catch (e) {
+      } catch (e: any) {
           console.error("Error fetching transactions:", e);
+          // Auto-Logout on Auth Failure
+          if (e.status === 401 || e.status === 403) {
+             handleLogout();
+          }
       }
-  };
+  }, [handleLogout]);
 
   // Fetch Staff from API
-  const fetchStaff = async (authToken: string) => {
+  const fetchStaff = useCallback(async (authToken: string) => {
     try {
         const data = await api.getStaff(authToken);
         setStaffList(data);
-    } catch (e) {
+    } catch (e: any) {
         console.error("Error fetching staff:", e);
+        if (e.status === 401 || e.status === 403) {
+             handleLogout();
+        }
     }
-  };
+  }, [handleLogout]);
 
-  // Restore session on load
+  // --- LIFECYCLE HOOKS ---
+
+  // 1. Restore session on load
   useEffect(() => {
     const restoreSession = async () => {
         const storedToken = localStorage.getItem('token');
@@ -69,7 +94,7 @@ const App: React.FC = () => {
                     setCurrentView('dashboard');
                 }
                 
-                // Fetch Data only if NOT Admin (Admins use specific endpoints in their components)
+                // Initial Data Fetch
                 if (parsedProfile.role !== UserRole.ADMIN) {
                     fetchTransactions(storedToken);
                     if (parsedProfile.role === UserRole.OWNER) {
@@ -79,14 +104,38 @@ const App: React.FC = () => {
 
             } catch (e) {
                 console.error("Failed to restore session", e);
-                localStorage.clear();
+                handleLogout(); // Clear invalid data
             }
         }
         setIsCheckingSession(false);
     };
 
     restoreSession();
-  }, []);
+  }, [fetchTransactions, fetchStaff, handleLogout]);
+
+  // 2. Auto-Refresh Data on Window Focus (Mobile App Resume)
+  useEffect(() => {
+      const handleFocus = () => {
+          if (isAuthenticated && token && userProfile?.role !== UserRole.ADMIN) {
+              console.log("App resumed/focused. Refreshing data...");
+              fetchTransactions(token);
+              if (userProfile?.role === UserRole.OWNER) {
+                  fetchStaff(token);
+              }
+          }
+      };
+
+      window.addEventListener('focus', handleFocus);
+      // Optional: Add visibilitychange for broader browser support
+      document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') handleFocus();
+      });
+
+      return () => {
+          window.removeEventListener('focus', handleFocus);
+          document.removeEventListener('visibilitychange', handleFocus);
+      };
+  }, [isAuthenticated, token, userProfile, fetchTransactions, fetchStaff]);
 
   const handleLogin = (profile: BusinessProfile, authToken: string) => {
     setUserProfile(profile);
@@ -95,7 +144,6 @@ const App: React.FC = () => {
     
     if (profile.role === UserRole.ADMIN) {
       setCurrentView('admin_dashboard');
-      // Admin doesn't need to fetch standard transactions/staff list
     } else {
       if (profile.role === UserRole.STAFF) {
          setCurrentView('upload');
@@ -110,16 +158,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userProfile');
-    setIsAuthenticated(false);
-    setUserProfile(null);
-    setToken('');
-    setTransactions([]);
-    setStaffList([]);
-  };
-
   const handleProfileUpdate = (updatedProfile: BusinessProfile) => {
     setUserProfile(updatedProfile);
   };
@@ -128,21 +166,14 @@ const App: React.FC = () => {
     try {
         const savedTransaction = await api.createTransaction(t, token);
         setTransactions(prev => [savedTransaction, ...prev]);
-        
-        if (userProfile?.role === UserRole.STAFF) {
-            alert("Transaction Saved!");
-        } else {
-             alert("Transaction Saved!");
-        }
-
+        alert("Transaction Saved!");
     } catch (e: any) {
-        if (e.status === 403 || (e.message && e.message.includes('Invalid token'))) {
-            alert("Your session has expired or is invalid. Please login again.");
+        if (e.status === 401 || e.status === 403 || (e.message && e.message.includes('Invalid token'))) {
+            alert("Your session has expired. Please login again.");
             handleLogout();
             return;
         }
         alert(`Failed to save transaction: ${e.message}`);
-        console.error(e);
     }
   };
 
@@ -151,6 +182,10 @@ const App: React.FC = () => {
           await api.deleteTransaction(id, token);
           setTransactions(prev => prev.filter(t => t.id !== id));
       } catch (e: any) {
+          if (e.status === 401 || e.status === 403) {
+               handleLogout();
+               return;
+          }
           alert("Failed to delete transaction: " + e.message);
       }
   };
@@ -159,7 +194,11 @@ const App: React.FC = () => {
       try {
           await api.createStaff(userData, token);
           fetchStaff(token);
-      } catch (error) {
+      } catch (error: any) {
+          if (error.status === 401 || error.status === 403) {
+              handleLogout();
+              return;
+          }
           throw error;
       }
   };
@@ -168,8 +207,11 @@ const App: React.FC = () => {
       try {
         await api.deleteStaff(id, token);
         fetchStaff(token);
-      } catch (error) {
-        console.error(error);
+      } catch (error: any) {
+        if (error.status === 401 || error.status === 403) {
+            handleLogout();
+            return;
+        }
         throw error;
       }
   };

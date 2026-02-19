@@ -3,14 +3,9 @@
 
 // ---------------------------------------------------------------------------
 // IMPORTANT FOR RENDER DEPLOYMENT:
-// 
-// 1. Go to your Render Dashboard (dashboard.render.com).
-// 2. Select your Web Service.
-// 3. Copy the URL found at the top left (it looks like https://something.onrender.com).
-// 4. Paste it into the PROD_URL variable below.
 // ---------------------------------------------------------------------------
 
-const PROD_URL = 'https://merohisab-euxk.onrender.com/api'; // <--- REPLACE WITH YOUR RENDER URL
+const PROD_URL = 'https://merohisab-euxk.onrender.com/api'; // Correct Render URL
 
 // Fallback for local development
 const LOCAL_IP = '192.168.1.66'; // Your local computer IP
@@ -32,30 +27,31 @@ let determinedUrl = (import.meta as any).env?.VITE_API_URL || baseUrl;
 determinedUrl = determinedUrl.replace(/\/+$/, '');
 
 // 3. FORCE append /api if not present
-// This fixes the "Route POST /auth/login not found" error by ensuring we hit /api/auth/login
 if (!determinedUrl.endsWith('/api')) {
     determinedUrl = `${determinedUrl}/api`;
 }
 
 const API_URL = determinedUrl;
 
-console.log("-----------------------------------");
 console.log("FINAL API URL:", API_URL);
-console.log("If you see 404 errors, check if this URL is correct.");
-console.log("-----------------------------------");
 
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
+        // Create an error object
+        const error: any = new Error();
+        // Attach the status code (Critical for detecting 401)
+        error.status = response.status;
+        
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
             const err = await response.json();
-            const error: any = new Error(err.message || 'API Error');
+            error.message = err.message || 'API Error';
             error.code = err.code;
-            throw error;
         } else {
             const text = await response.text();
-            throw new Error(`Server Error (${response.status}): ${text.slice(0, 100)}`);
+            error.message = `Server Error (${response.status}): ${text.slice(0, 100)}`;
         }
+        throw error;
     }
     return response.json();
 };
@@ -63,8 +59,6 @@ const handleResponse = async (response: Response) => {
 export const api = {
   // Auth
   register: async (data: any) => {
-    // Debug log
-    console.log(`POST request to: ${API_URL}/auth/register`);
     const response = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -74,8 +68,6 @@ export const api = {
   },
 
   login: async (data: any) => {
-    // Debug log
-    console.log(`POST request to: ${API_URL}/auth/login`);
     const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
