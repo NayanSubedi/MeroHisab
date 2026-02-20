@@ -14,6 +14,7 @@ import DailyTransactions from './components/DailyTransactions';
 import { BusinessProfile, Transaction, TransactionType, ExpenseCategory, UserRole, User } from './types';
 import { Loader2 } from 'lucide-react';
 import { api } from './services/api';
+import { Preferences } from '@capacitor/preferences';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -30,16 +31,16 @@ const App: React.FC = () => {
 
   // --- LOGOUT LOGIC ---
   // Defined early so it can be used by fetchers upon 401 error
-  const handleLogout = useCallback(() => {
-    console.log("Logging out...");
-    localStorage.removeItem('token');
-    localStorage.removeItem('userProfile');
-    setIsAuthenticated(false);
-    setUserProfile(null);
-    setToken('');
-    setTransactions([]);
-    setStaffList([]);
-  }, []);
+const handleLogout = useCallback(async () => {
+  console.log("Logging out...");
+  await Preferences.remove({ key: 'token' });
+  await Preferences.remove({ key: 'userProfile' });
+  setIsAuthenticated(false);
+  setUserProfile(null);
+  setToken('');
+  setTransactions([]);
+  setStaffList([]);
+}, []);
 
   // --- DATA FETCHING ---
 
@@ -75,8 +76,8 @@ const App: React.FC = () => {
   // 1. Restore session on load
   useEffect(() => {
     const restoreSession = async () => {
-        const storedToken = localStorage.getItem('token');
-        const storedProfile = localStorage.getItem('userProfile');
+const { value: storedToken } = await Preferences.get({ key: 'token' });
+const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
 
         if (storedToken && storedProfile) {
             try {

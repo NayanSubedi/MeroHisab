@@ -3,7 +3,7 @@ import { Eye, EyeOff, UploadCloud, CheckCircle, Smartphone, Mail, Fingerprint, A
 import { BusinessProfile, UserRole } from '../types';
 import { api } from '../services/api';
 import { BiometricService } from '../services/biometricService';
-
+import { Preferences } from '@capacitor/preferences'
 interface AuthProps {
   onLogin: (profile: BusinessProfile, token: string) => void;
 }
@@ -18,19 +18,20 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   // Biometric State
   const [showBiometric, setShowBiometric] = useState(false);
 
-  useEffect(() => {
-    checkBiometrics();
-  }, []);
+useEffect(() => {
+  checkBiometrics();
+}, []);
 
-  const checkBiometrics = async () => {
-    const isHardwareAvailable = await BiometricService.isAvailable();
-    const storedCredentials = BiometricService.getCredentials();
-    
-    // Only show button if hardware works AND user has enabled it in settings (stored creds exist)
-    if (isHardwareAvailable && storedCredentials) {
-        setShowBiometric(true);
-    }
-  };
+const checkBiometrics = async () => {
+  const isHardwareAvailable = await BiometricService.isAvailable();
+  const storedCredentials = await BiometricService.getCredentials(); // ✅ FIX
+
+  if (isHardwareAvailable && storedCredentials) {
+    setShowBiometric(true);
+  } else {
+    setShowBiometric(false);
+  }
+};
 
 const handleBiometricLogin = async () => {
   setLoading(true);
@@ -44,7 +45,6 @@ const handleBiometricLogin = async () => {
       return;
     }
 
-    // ✅ FIX: await here
     const creds = await BiometricService.getCredentials();
 
     if (!creds || !creds.token) {
@@ -52,16 +52,16 @@ const handleBiometricLogin = async () => {
       return;
     }
 
-    const storedProfile = localStorage.getItem("userProfile");
+    // ✅ Use Preferences (NOT localStorage)
+    const { value } = await Preferences.get({ key: 'userProfile' });
 
-    if (!storedProfile) {
+    if (!value) {
       setError("Session expired. Please login with password again.");
       return;
     }
 
-    const parsedProfile = JSON.parse(storedProfile);
+    const parsedProfile = JSON.parse(value);
 
-    // ✅ Safe login restore
     onLogin(parsedProfile, creds.token);
 
   } catch (error) {
@@ -71,7 +71,6 @@ const handleBiometricLogin = async () => {
     setLoading(false);
   }
 };
-
 
   // Form States
   const [phone, setPhone] = useState('');
@@ -160,8 +159,24 @@ const handleBiometricLogin = async () => {
       };
 
       // Persist to Local Storage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('userProfile', JSON.stringify(profile));
+await Preferences.set({
+  key: 'token',
+  value: data.token,
+});
+
+await Preferences.set({
+  key: 'userProfile',
+  value: JSON.stringify(profile),
+});
+// ✅ Store biometric credentials if enabled
+if (profile.enableBiometricLogin) {
+  await BiometricService.setCredentials(
+    profile.email || profile.phone,
+    data.token
+  );
+} else {
+  await BiometricService.clearCredentials();
+}
       
       // Update biometric preference if enabled on server
       // Note: Actual hardware enablement happens in ProfileSettings, 

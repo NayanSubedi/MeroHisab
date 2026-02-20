@@ -1,5 +1,7 @@
+
+
 import React, { useState, useEffect } from 'react';
-import { Printer, Download, Eye, QrCode, CreditCard, Banknote, Loader2, CheckSquare, Square, Search, FileText, AlertCircle, Trash2, X, Percent, Calendar, User, Phone, Plus, RefreshCw, MapPin, Hash, ChevronLeft, ChevronRight, ArrowLeft, Wallet } from 'lucide-react';
+import { Printer, Download, Eye, QrCode, CreditCard, Banknote, Loader2, CheckSquare, Square, Search, FileText, AlertCircle, Trash2, X, Percent, Calendar, User, Phone, Plus, RefreshCw, MapPin, Hash, ChevronLeft, ChevronRight, ArrowLeft, Wallet, CheckCircle } from 'lucide-react';
 import { InvoiceItem, BusinessProfile, Transaction, TransactionType, UnitType, InvoiceDetails, PaymentMethod } from '../types';
 
 // Declare html2pdf
@@ -22,6 +24,9 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
   // UI State
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  
+  // Toast Notification State
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -69,6 +74,11 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
     setPaymentMethod('Cash');
     setErrors({}); 
     generateNewInvoiceNumber();
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
   // Unit Options
@@ -178,80 +188,110 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
     setShowPreviewModal(true);
     setCurrentPage(1); 
     resetForm();
+    showToast("Transaction Saved Successfully!", "success");
   };
 
-  // --- ROBUST MOBILE PDF DOWNLOAD FUNCTION ---
-  const downloadPDF = async () => {
+const downloadPDF = async () => {
     setIsGeneratingPdf(true);
     
     try {
         const element = document.getElementById('invoice-preview-content');
         if (!element) throw new Error("Invoice content not found");
 
-        // 1. Create a container specifically for PDF generation
-        // We set it to fixed/z-index -9999 so it's "visible" to the browser engine (rendering it),
-        // but hidden from the user. We force a standard A4 width (approx 794px).
-        const container = document.createElement('div');
-        container.style.position = 'fixed';
-        container.style.top = '0';
-        container.style.left = '0';
-        container.style.width = '794px'; // Standard A4 width in pixels
-        container.style.zIndex = '-9999';
-        container.style.backgroundColor = '#ffffff';
-        container.style.padding = '20px'; // Add some padding
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        // 2. Clone the content
-        const clone = element.cloneNode(true) as HTMLElement;
-        
-        // 3. Force desktop-like styling on the clone to prevent mobile squashing
-        clone.style.maxWidth = 'none';
-        clone.style.width = '100%';
-        clone.style.height = 'auto';
-        clone.style.overflow = 'visible';
-        
-        // Ensure text is black (fix for dark mode issues)
-        const allNodes = clone.querySelectorAll('*');
-        allNodes.forEach((node: any) => {
-            node.style.color = '#000000';
-            if (node.style.borderColor) {
-                node.style.borderColor = '#cccccc';
+        if (isMobile) {
+            // Mobile: use print dialog instead of html2pdf
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                showToast("Please allow popups to download the invoice.", "error");
+                return;
             }
-        });
 
-        container.appendChild(clone);
-        document.body.appendChild(container);
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <title>Invoice_${selectedInvoice?.billNumber}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; color: #000; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                        th { background: #f5f5f5; font-weight: bold; }
+                        @media print {
+                            body { margin: 0; }
+                            button { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${element.innerHTML}
+                    <br/>
+                    <button onclick="window.print()" style="padding:12px 24px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;width:100%">
+                        Save as PDF / Print
+                    </button>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
 
-        // 4. Detect Mobile for Scaling
-        // Mobile browsers crash if the canvas is too huge. We lower the scale on mobile.
-        const isMobile = window.innerWidth < 768; 
-        const scaleAmount = isMobile ? 1.5 : 2;
+        } else {
+            // Desktop: Use off-screen absolute container to prevent browser zoom issues
+            const container = document.createElement('div');
+            container.style.position = 'absolute'; 
+            container.style.top = '-9999px';       
+            container.style.left = '-9999px';      
+            container.style.width = '794px';       
+            container.style.zIndex = '-9999';
+            container.style.backgroundColor = '#ffffff';
+            container.style.padding = '20px';
 
-        const opt = {
-            margin: 0.3,
-            filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-                scale: scaleAmount, 
-                useCORS: true, 
-                logging: false,
-                windowWidth: 794, // Trick the engine into thinking screen is wide
-                scrollY: 0
-            },
-            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-        };
+            const clone = element.cloneNode(true) as HTMLElement;
+            clone.style.maxWidth = 'none';
+            clone.style.width = '100%';
+            clone.style.height = 'auto'; 
+            clone.style.overflow = 'visible';
 
-        await html2pdf().set(opt).from(container).save();
-        
-        // Cleanup
-        document.body.removeChild(container);
+            const allNodes = clone.querySelectorAll('*');
+            allNodes.forEach((node: any) => {
+                node.style.color = '#000000';
+            });
+
+            container.appendChild(clone);
+            document.body.appendChild(container);
+
+            const opt = {
+                margin: 0.3,
+                filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false,
+                    scrollY: 0,
+                    scrollX: 0
+                },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                await html2pdf().set(opt).from(container).save();
+                showToast("PDF Downloaded Successfully!", "success");
+            } finally {
+                if (document.body.contains(container)) {
+                    document.body.removeChild(container);
+                }
+            }
+        }
 
     } catch (error: any) {
         console.error("PDF Generation failed:", error);
-        alert("Download failed: " + (error.message || "Unknown error"));
+        showToast("Download failed: " + (error.message || "Unknown error"), "error");
     } finally {
         setIsGeneratingPdf(false);
     }
-  };
+};
 
   // --- Pagination Logic ---
   const invoiceHistory = transactions
@@ -274,6 +314,19 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
             input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
             input[type=number] { -moz-appearance: textfield; }
           `}</style>
+
+          {/* --- TOAST NOTIFICATION --- */}
+          {toast && (
+              <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white animate-in slide-in-from-right-8 fade-in duration-300 ${
+                  toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+              }`}>
+                  {toast.type === 'success' ? <CheckCircle size={22} /> : <AlertCircle size={22} />}
+                  <span className="font-medium text-sm pr-2">{toast.message}</span>
+                  <button onClick={() => setToast(null)} className="ml-2 hover:opacity-75 transition-opacity">
+                      <X size={18} />
+                  </button>
+              </div>
+          )}
 
           {/* --- MOBILE: CREATE INVOICE BOX --- */}
           <div className="lg:hidden shrink-0">
@@ -662,3 +715,4 @@ const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, business,
 };
 
 export default InvoiceGenerator;
+

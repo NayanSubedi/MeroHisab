@@ -9,9 +9,7 @@ export const BiometricService = {
    */
   isAvailable: async (): Promise<boolean> => {
     try {
-      if (!Capacitor.isNativePlatform()) {
-        return false;
-      }
+      if (!Capacitor.isNativePlatform()) return false;
 
       const result = await NativeBiometric.isAvailable();
       return result.isAvailable;
@@ -26,9 +24,7 @@ export const BiometricService = {
    */
   verifyIdentity: async (): Promise<boolean> => {
     try {
-      if (!Capacitor.isNativePlatform()) {
-        return false;
-      }
+      if (!Capacitor.isNativePlatform()) return false;
 
       await NativeBiometric.verifyIdentity({
         reason: 'Authenticate to access MeroHisab',
@@ -45,16 +41,14 @@ export const BiometricService = {
   },
 
   /**
-   * Securely store credentials in device keystore
+   * Store credentials securely
    */
   setCredentials: async (
     identifier: string,
     token: string
   ): Promise<boolean> => {
     try {
-      if (!Capacitor.isNativePlatform()) {
-        return false;
-      }
+      if (!Capacitor.isNativePlatform()) return false;
 
       await NativeBiometric.setCredentials({
         username: identifier,
@@ -64,22 +58,20 @@ export const BiometricService = {
 
       return true;
     } catch (error) {
-      console.error('Failed to store biometric credentials:', error);
+      console.error('Failed to store credentials:', error);
       return false;
     }
   },
 
   /**
-   * Retrieve credentials from secure keystore
+   * Retrieve credentials
    */
   getCredentials: async (): Promise<{
     identifier: string;
     token: string;
   } | null> => {
     try {
-      if (!Capacitor.isNativePlatform()) {
-        return null;
-      }
+      if (!Capacitor.isNativePlatform()) return null;
 
       const credentials = await NativeBiometric.getCredentials({
         server: SERVER_KEY,
@@ -89,20 +81,17 @@ export const BiometricService = {
         identifier: credentials.username,
         token: credentials.password,
       };
-    } catch (error) {
-      console.error('Failed to get biometric credentials:', error);
+    } catch {
       return null;
     }
   },
 
   /**
-   * Delete stored biometric credentials
+   * Delete stored credentials
    */
   clearCredentials: async (): Promise<boolean> => {
     try {
-      if (!Capacitor.isNativePlatform()) {
-        return false;
-      }
+      if (!Capacitor.isNativePlatform()) return false;
 
       await NativeBiometric.deleteCredentials({
         server: SERVER_KEY,
@@ -110,7 +99,7 @@ export const BiometricService = {
 
       return true;
     } catch (error) {
-      console.error('Failed to clear biometric credentials:', error);
+      console.error('Failed to clear credentials:', error);
       return false;
     }
   },
