@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Printer, Download, Eye, QrCode, CreditCard, Banknote, Loader2, CheckSquare, Square, Search, FileText, AlertCircle, Trash2, X, Percent, Calendar, User, Phone, Plus, RefreshCw, MapPin, Hash, ChevronLeft, ChevronRight, ArrowLeft, Wallet, CheckCircle } from 'lucide-react';
 import { InvoiceItem, BusinessProfile, Transaction, TransactionType, UnitType, InvoiceDetails, PaymentMethod } from '../types';
@@ -50,7 +48,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
   const [isTaxInclusive, setIsTaxInclusive] = useState(false);
   
   const [items, setItems] = useState<InvoiceItem[]>([
-    { id: '1', description: '', unit: 'pcs', quantity: 1, rate: 0, amount: 0 }
+    { id: '1', description: '', unit: 'pcs', quantity: 1, rate: '', amount: 0 }
   ]);
 
   // Generate Invoice Number on mount
@@ -69,7 +67,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
     setCustomerPhone(''); 
     setCustomerAddress(''); 
     setCustomerPan('');    
-    setItems([{ id: Date.now().toString(), description: '', unit: 'pcs', quantity: 1, rate: 0, amount: 0 }]);
+    setItems([{ id: Date.now().toString(), description: '', unit: 'pcs', quantity: 1, rate: '', amount: 0 }]);
     setDiscountPercentage('');
     setPaymentMethod('Cash');
     setErrors({}); 
@@ -86,7 +84,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
 
   // --- Item Management ---
   const addItem = () => {
-    setItems([...items, { id: Date.now().toString(), description: '', unit: 'pcs', quantity: 1, rate: 0, amount: 0 }]);
+    setItems([...items, { id: Date.now().toString(), description: '', unit: 'pcs', quantity: 1, rate: '', amount: 0 }]);
   };
 
   const removeItem = (id: string) => {
@@ -191,107 +189,78 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
     showToast("Transaction Saved Successfully!", "success");
   };
 
-const downloadPDF = async () => {
-    setIsGeneratingPdf(true);
-    
-    try {
-        const element = document.getElementById('invoice-preview-content');
-        if (!element) throw new Error("Invoice content not found");
+  const downloadPDF = async () => {
+      setIsGeneratingPdf(true);
+      
+      try {
+          const element = document.getElementById('invoice-preview-content');
+          if (!element) throw new Error("Invoice content not found");
 
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        if (isMobile) {
-            // Mobile: use print dialog instead of html2pdf
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
-                showToast("Please allow popups to download the invoice.", "error");
-                return;
-            }
+          if (isMobile) {
+              // Mobile: use print dialog instead of html2pdf
+              const printWindow = window.open('', '_blank');
+              if (!printWindow) {
+                  showToast("Please allow popups to download the invoice.", "error");
+                  return;
+              }
 
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <title>Invoice_${selectedInvoice?.billNumber}</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; color: #000; }
-                        table { width: 100%; border-collapse: collapse; }
-                        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                        th { background: #f5f5f5; font-weight: bold; }
-                        @media print {
-                            body { margin: 0; }
-                            button { display: none; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${element.innerHTML}
-                    <br/>
-                    <button onclick="window.print()" style="padding:12px 24px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;width:100%">
-                        Save as PDF / Print
-                    </button>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
+              printWindow.document.write(`
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                      <meta name="viewport" content="width=device-width, initial-scale=1">
+                      <title>Invoice_${selectedInvoice?.billNumber}</title>
+                      <style>
+                          body { font-family: Arial, sans-serif; margin: 20px; color: #000; }
+                          table { width: 100%; border-collapse: collapse; }
+                          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                          th { background: #f5f5f5; font-weight: bold; }
+                          @media print {
+                              body { margin: 0; }
+                              button { display: none; }
+                          }
+                      </style>
+                  </head>
+                  <body>
+                      ${element.innerHTML}
+                      <br/>
+                      <button onclick="window.print()" style="padding:12px 24px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;width:100%">
+                          Save as PDF / Print
+                      </button>
+                  </body>
+                  </html>
+              `);
+              printWindow.document.close();
 
-        } else {
-            // Desktop: Use off-screen absolute container to prevent browser zoom issues
-            const container = document.createElement('div');
-            container.style.position = 'absolute'; 
-            container.style.top = '-9999px';       
-            container.style.left = '-9999px';      
-            container.style.width = '794px';       
-            container.style.zIndex = '-9999';
-            container.style.backgroundColor = '#ffffff';
-            container.style.padding = '20px';
+          } else {
+              // Desktop: Rely entirely on html2pdf using the live visible element.
+              // No manual cloning needed, avoiding blank coordinates/rendering issues.
+              const opt = {
+                  margin: 0.3,
+                  filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
+                  image: { type: 'jpeg', quality: 1 },
+                  html2canvas: { 
+                      scale: 2, 
+                      useCORS: true, 
+                      logging: false,
+                      backgroundColor: '#ffffff'
+                  },
+                  jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+              };
 
-            const clone = element.cloneNode(true) as HTMLElement;
-            clone.style.maxWidth = 'none';
-            clone.style.width = '100%';
-            clone.style.height = 'auto'; 
-            clone.style.overflow = 'visible';
+              await html2pdf().set(opt).from(element).save();
+              showToast("PDF Downloaded Successfully!", "success");
+          }
 
-            const allNodes = clone.querySelectorAll('*');
-            allNodes.forEach((node: any) => {
-                node.style.color = '#000000';
-            });
-
-            container.appendChild(clone);
-            document.body.appendChild(container);
-
-            const opt = {
-                margin: 0.3,
-                filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false,
-                    scrollY: 0,
-                    scrollX: 0
-                },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-            };
-
-            try {
-                await html2pdf().set(opt).from(container).save();
-                showToast("PDF Downloaded Successfully!", "success");
-            } finally {
-                if (document.body.contains(container)) {
-                    document.body.removeChild(container);
-                }
-            }
-        }
-
-    } catch (error: any) {
-        console.error("PDF Generation failed:", error);
-        showToast("Download failed: " + (error.message || "Unknown error"), "error");
-    } finally {
-        setIsGeneratingPdf(false);
-    }
-};
+      } catch (error: any) {
+          console.error("PDF Generation failed:", error);
+          showToast("Download failed: " + (error.message || "Unknown error"), "error");
+      } finally {
+          setIsGeneratingPdf(false);
+      }
+  };
 
   // --- Pagination Logic ---
   const invoiceHistory = transactions
@@ -610,10 +579,19 @@ interface InvoicePreviewProps {
 }
 
 const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, business, onClose, onDownload, isGenerating }) => {
+    
+    // Fallbacks to securely capture customer details if older databases mapped it differently 
+    const details = invoice.invoiceDetails as any;
+    const customerAddress = details?.customerAddress || details?.address || (invoice as any)?.partyAddress;
+    const customerPan = details?.customerPan || details?.pan || (invoice as any)?.partyPan;
+    const customerPhone = details?.customerPhone || details?.phone || (invoice as any)?.partyPhone;
+
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+            <div className="bg-white dark:bg-gray-800 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                
+                {/* Header */}
+                <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900 shrink-0">
                     <h3 className="font-bold text-gray-800 dark:text-white">Invoice Preview</h3>
                     <div className="flex space-x-2">
                         <button onClick={onDownload} disabled={isGenerating} className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50">
@@ -625,88 +603,99 @@ const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, business,
                     </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-white text-gray-900" id="invoice-preview-content">
-                    {/* Invoice Header */}
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-start border-b-2 border-gray-800 pb-6 mb-6 gap-4">
-                        <div>
-                             {business.logo && <img src={business.logo} alt="Logo" className="h-16 mb-2 object-contain" />}
-                             <h1 className="text-2xl font-bold uppercase tracking-wide">{business.name}</h1>
-                             <p className="text-sm text-gray-600">{business.address}</p>
-                             <p className="text-sm text-gray-600">PAN: {business.pan} | Phone: {business.phone}</p>
+                {/* 
+                    FIX FOR BLANK PDF:
+                    The scrolling `overflow-y-auto` is applied to this wrapping container. 
+                    The child `id="invoice-preview-content"` is NOT restricted in height or scroll,
+                    allowing html2canvas to capture it perfectly without clipping or turning blank.
+                */}
+                <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-800 p-0 sm:p-4 w-full">
+                    
+                    {/* THIS IS THE TARGET ELEMENT FOR html2pdf */}
+                    <div id="invoice-preview-content" className="bg-white text-black p-6 sm:p-10 max-w-2xl mx-auto shadow-sm">
+                        
+                        {/* Invoice Header */}
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-start border-b-2 border-gray-800 pb-6 mb-6 gap-4">
+                            <div>
+                                 {business.logo && <img src={business.logo} alt="Logo" className="h-16 mb-2 object-contain" />}
+                                 <h1 className="text-2xl font-bold uppercase tracking-wide">{business.name}</h1>
+                                 <p className="text-sm text-gray-600">{business.address}</p>
+                                 <p className="text-sm text-gray-600">PAN: {business.pan} | Phone: {business.phone}</p>
+                            </div>
+                            <div className="sm:text-right">
+                                 <h2 className="text-3xl font-bold text-gray-800">INVOICE</h2>
+                                 <p className="text-sm font-medium mt-2">Inv No: {invoice.billNumber}</p>
+                                 <p className="text-sm text-gray-500">Date: {invoice.date.split('T')[0]}</p>
+                            </div>
                         </div>
-                        <div className="sm:text-right">
-                             <h2 className="text-3xl font-bold text-gray-800">INVOICE</h2>
-                             <p className="text-sm font-medium mt-2">Inv No: {invoice.billNumber}</p>
-                             <p className="text-sm text-gray-500">Date: {invoice.date}</p>
+
+                        {/* Customer Info */}
+                        <div className="mb-8">
+                            <p className="text-xs font-bold text-gray-400 uppercase mb-1">Bill To:</p>
+                            <h3 className="text-lg font-bold text-gray-900">{invoice.partyName}</h3>
+                            {customerAddress && <p className="text-sm text-gray-600">Address: {customerAddress}</p>}
+                            {customerPan && <p className="text-sm text-gray-600">PAN: {customerPan}</p>}
+                            {customerPhone && <p className="text-sm text-gray-600">Phone: {customerPhone}</p>}
                         </div>
-                    </div>
 
-                    {/* Customer Info */}
-                    <div className="mb-8">
-                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">Bill To:</p>
-                        <h3 className="text-lg font-bold">{invoice.partyName}</h3>
-                        {invoice.invoiceDetails?.customerAddress && <p className="text-sm text-gray-600">Address: {invoice.invoiceDetails.customerAddress}</p>}
-                        {invoice.invoiceDetails?.customerPan && <p className="text-sm text-gray-600">PAN: {invoice.invoiceDetails.customerPan}</p>}
-                        {invoice.invoiceDetails?.customerPhone && <p className="text-sm text-gray-600">Phone: {invoice.invoiceDetails.customerPhone}</p>}
-                    </div>
-
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full mb-8 min-w-[500px]">
-                            <thead>
-                                <tr className="bg-gray-100 border-b border-gray-300">
-                                    <th className="text-center py-2 px-3 font-bold text-sm border-r border-gray-300 w-12">S.N</th>
-                                    <th className="text-left py-2 px-3 font-bold text-sm">Description</th>
-                                    <th className="text-center py-2 px-3 font-bold text-sm">Qty</th>
-                                    <th className="text-center py-2 px-3 font-bold text-sm">Unit</th>
-                                    <th className="text-right py-2 px-3 font-bold text-sm">Rate</th>
-                                    <th className="text-right py-2 px-3 font-bold text-sm">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {invoice.invoiceDetails?.items.map((item, idx) => (
-                                    <tr key={idx} className="border-b border-gray-200">
-                                        <td className="py-3 px-3 text-sm text-center border-r border-gray-200">{idx + 1}</td>
-                                        <td className="py-3 px-3 text-sm">{item.description}</td>
-                                        <td className="py-3 px-3 text-sm text-center">{item.quantity}</td>
-                                        <td className="py-3 px-3 text-sm text-center">{item.unit}</td>
-                                        <td className="py-3 px-3 text-sm text-right">{item.rate.toLocaleString()}</td>
-                                        <td className="py-3 px-3 text-sm text-right font-medium">{item.amount.toLocaleString()}</td>
+                        {/* Table */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full mb-8 min-w-[500px]">
+                                <thead>
+                                    <tr className="bg-gray-100 border-b border-gray-300">
+                                        <th className="text-center py-2 px-3 font-bold text-gray-900 text-sm border-r border-gray-300 w-12">S.N</th>
+                                        <th className="text-left py-2 px-3 font-bold text-gray-900 text-sm">Description</th>
+                                        <th className="text-center py-2 px-3 font-bold text-gray-900 text-sm">Qty</th>
+                                        <th className="text-center py-2 px-3 font-bold text-gray-900 text-sm">Unit</th>
+                                        <th className="text-right py-2 px-3 font-bold text-gray-900 text-sm">Rate</th>
+                                        <th className="text-right py-2 px-3 font-bold text-gray-900 text-sm">Amount</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {invoice.invoiceDetails?.items.map((item, idx) => (
+                                        <tr key={idx} className="border-b border-gray-200">
+                                            <td className="py-3 px-3 text-sm text-center text-gray-900 border-r border-gray-200">{idx + 1}</td>
+                                            <td className="py-3 px-3 text-sm text-gray-900">{item.description}</td>
+                                            <td className="py-3 px-3 text-sm text-center text-gray-900">{item.quantity}</td>
+                                            <td className="py-3 px-3 text-sm text-center text-gray-900">{item.unit}</td>
+                                            <td className="py-3 px-3 text-sm text-right text-gray-900">{item.rate.toLocaleString()}</td>
+                                            <td className="py-3 px-3 text-sm text-right text-gray-900 font-medium">{item.amount.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
 
-                    {/* Totals */}
-                    <div className="flex justify-end">
-                        <div className="w-full sm:w-64 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Subtotal:</span>
-                                <span className="font-medium">{invoice.invoiceDetails?.subtotal.toLocaleString()}</span>
-                            </div>
-                            {invoice.invoiceDetails?.discount ? (
-                                <div className="flex justify-between text-sm text-gray-600"><span>Discount ({invoice.invoiceDetails.discountPercentage}%):</span><span>- {invoice.invoiceDetails?.discount.toLocaleString()}</span></div>
-                            ) : null}
-                             {invoice.vatAmount ? (
-                                <div className="flex justify-between text-sm text-gray-600"><span>VAT (13%):</span><span>{invoice.vatAmount.toLocaleString()}</span></div>
-                            ) : null}
-                            <div className="flex justify-between text-lg font-bold border-t border-gray-800 pt-2 mt-2">
-                                <span>Total:</span>
-                                <span>NPR {invoice.amount.toLocaleString()}</span>
-                            </div>
-                            {/* Display Payment Method in Preview */}
-                             <div className="flex justify-between text-xs text-gray-500 pt-1">
-                                <span>Payment:</span>
-                                <span className="uppercase font-semibold">{(invoice.invoiceDetails as any)?.paymentMethod || 'Cash'}</span>
+                        {/* Totals */}
+                        <div className="flex justify-end">
+                            <div className="w-full sm:w-64 space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Subtotal:</span>
+                                    <span className="font-medium text-gray-900">{invoice.invoiceDetails?.subtotal.toLocaleString()}</span>
+                                </div>
+                                {invoice.invoiceDetails?.discount ? (
+                                    <div className="flex justify-between text-sm text-gray-600"><span>Discount ({invoice.invoiceDetails.discountPercentage}%):</span><span>- {invoice.invoiceDetails?.discount.toLocaleString()}</span></div>
+                                ) : null}
+                                 {invoice.vatAmount ? (
+                                    <div className="flex justify-between text-sm text-gray-600"><span>VAT (13%):</span><span>{invoice.vatAmount.toLocaleString()}</span></div>
+                                ) : null}
+                                <div className="flex justify-between text-lg font-bold text-gray-900 border-t border-gray-800 pt-2 mt-2">
+                                    <span>Total:</span>
+                                    <span>NPR {invoice.amount.toLocaleString()}</span>
+                                </div>
+                                {/* Display Payment Method in Preview */}
+                                 <div className="flex justify-between text-xs text-gray-500 pt-1">
+                                    <span>Payment:</span>
+                                    <span className="uppercase font-semibold text-gray-700">{(invoice.invoiceDetails as any)?.paymentMethod || 'Cash'}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Footer */}
-                    <div className="mt-12 text-center text-xs text-gray-400 pt-6 border-t border-gray-200">
-                        <p>Thank you for doing business with us.</p>
-                        <p>Generated by MeroHisab</p>
+                        {/* Footer */}
+                        <div className="mt-12 text-center text-xs text-gray-400 pt-6 border-t border-gray-200">
+                            <p>Thank you for doing business with us.</p>
+                            <p>Generated by MeroHisab</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -715,4 +704,3 @@ const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, business,
 };
 
 export default InvoiceGenerator;
-

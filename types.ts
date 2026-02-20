@@ -31,7 +31,7 @@ export interface InvoiceItem {
   description: string;
   unit: UnitType;
   quantity: number;
-  rate: number;
+  rate: number | '';
   amount: number;
 }
 
