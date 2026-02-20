@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, Check, AlertTriangle, X, Loader2, History, FileText, Eye, Calendar, Image as ImageIcon, Trash2, Aperture, UploadCloud } from 'lucide-react';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -20,7 +19,7 @@ const BillUpload: React.FC<BillUploadProps> = ({ onAddTransaction, onCancel, tra
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // History & Modal State
-  const [historyDate, setHistoryDate] = useState(new Date().toISOString().split('T')[0]);
+  const [historyDate, setHistoryDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedBill, setSelectedBill] = useState<Transaction | null>(null);
 
   // Form Fields
@@ -31,9 +30,10 @@ const BillUpload: React.FC<BillUploadProps> = ({ onAddTransaction, onCancel, tra
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [category, setCategory] = useState<ExpenseCategory>(ExpenseCategory.PURCHASE);
 
-  // Filter History based on selected date
+  // Filter History based on selected date or 'all'
   const historyData = transactions.filter(t => {
       if (t.type !== TransactionType.EXPENSE) return false;
+      if (historyDate === 'all') return true;
       const tDate = t.date.includes('T') ? t.date.split('T')[0] : t.date;
       return tDate === historyDate;
   });
@@ -164,7 +164,7 @@ const BillUpload: React.FC<BillUploadProps> = ({ onAddTransaction, onCancel, tra
                 <div className="p-4 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full mb-3">
                     <FileText size={32} />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add Expense Receipt</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add Receipt</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Choose how you want to add the bill</p>
             </div>
 
@@ -261,18 +261,44 @@ const BillUpload: React.FC<BillUploadProps> = ({ onAddTransaction, onCancel, tra
 
     {/* Uploaded Bills History */}
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
             <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center">
                 <History size={20} className="mr-2 text-gray-500"/> Upload History
             </h3>
-            <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700 p-1.5 rounded-lg border border-gray-200 dark:border-gray-600">
-                <span className="text-sm text-gray-500 dark:text-gray-300 pl-2 flex items-center"><Calendar size={14} className="mr-1"/> Filter:</span>
-                <input 
-                    type="date" 
-                    value={historyDate} 
-                    onChange={(e) => setHistoryDate(e.target.value)} 
-                    className="bg-transparent border-none text-sm text-gray-800 dark:text-white focus:ring-0 p-1"
-                />
+            
+            {/* Filter Section - Made Responsive */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg border border-gray-200 dark:border-gray-600 w-full md:w-auto">
+                <div className="flex items-center justify-between w-full sm:w-auto">
+                    <span className="text-sm text-gray-500 dark:text-gray-300 pl-1 flex items-center whitespace-nowrap">
+                        <Calendar size={14} className="mr-1"/> Filter:
+                    </span>
+                    
+                    <select 
+                        value={historyDate === 'all' ? 'all' : 'custom'}
+                        onChange={(e) => {
+                            if (e.target.value === 'all') {
+                                setHistoryDate('all');
+                            } else {
+                                setHistoryDate(new Date().toISOString().split('T')[0]);
+                            }
+                        }}
+                        className="bg-transparent border-none text-sm font-medium text-gray-800 dark:text-white focus:ring-0 p-1 cursor-pointer outline-none ml-2"
+                    >
+                        <option value="custom">Specific Date</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+
+                {historyDate !== 'all' && (
+                    <div className="border-t sm:border-t-0 sm:border-l border-gray-200 dark:border-gray-600 pt-2 sm:pt-0 sm:pl-2 w-full sm:w-auto flex items-center">
+                        <input 
+                            type="date" 
+                            value={historyDate} 
+                            onChange={(e) => setHistoryDate(e.target.value || 'all')} 
+                            className="bg-transparent border-none text-sm text-gray-800 dark:text-white focus:ring-0 p-1 outline-none w-full"
+                        />
+                    </div>
+                )}
             </div>
         </div>
         
@@ -295,7 +321,9 @@ const BillUpload: React.FC<BillUploadProps> = ({ onAddTransaction, onCancel, tra
                      </div>
                  </div>
              )) : (
-                 <p className="text-center text-gray-500 text-sm py-4">No bills found for this date.</p>
+                 <p className="text-center text-gray-500 text-sm py-4">
+                     {historyDate === 'all' ? 'No uploaded bills found.' : 'No bills found for this date.'}
+                 </p>
              )}
         </div>
 
@@ -350,7 +378,7 @@ const BillUpload: React.FC<BillUploadProps> = ({ onAddTransaction, onCancel, tra
                     ) : (
                         <tr>
                             <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400 italic">
-                                No bills found for {historyDate}.
+                                {historyDate === 'all' ? 'No uploaded bills found.' : `No bills found for ${historyDate}.`}
                             </td>
                         </tr>
                     )}
