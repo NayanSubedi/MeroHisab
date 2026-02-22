@@ -22,11 +22,17 @@ useEffect(() => {
   checkBiometrics();
 }, []);
 
+// Inside Auth.tsx
+
 const checkBiometrics = async () => {
   const isHardwareAvailable = await BiometricService.isAvailable();
-  const storedCredentials = await BiometricService.getCredentials(); // ✅ FIX
+  const storedCredentials = await BiometricService.getCredentials(); 
+  
+  // ✅ FIX: Also check if the profile exists in Preferences
+  const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
 
-  if (isHardwareAvailable && storedCredentials) {
+  // Only show biometric option if ALL data is present
+  if (isHardwareAvailable && storedCredentials && storedProfile) {
     setShowBiometric(true);
   } else {
     setShowBiometric(false);
@@ -52,7 +58,7 @@ const handleBiometricLogin = async () => {
       return;
     }
 
-    // ✅ NEW FIX: Check if the token has mathematically expired before logging in
+    // Check if the token has mathematically expired before logging in
     try {
       const base64Url = creds.token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -61,6 +67,7 @@ const handleBiometricLogin = async () => {
       if (tokenPayload.exp * 1000 < Date.now()) {
         await BiometricService.clearCredentials(); // Clear the dead token
         setError("Security session expired. Please login with password to renew.");
+        setShowBiometric(false); // Hide button
         return;
       }
     } catch (e) {
@@ -70,6 +77,9 @@ const handleBiometricLogin = async () => {
     const { value } = await Preferences.get({ key: 'userProfile' });
 
     if (!value) {
+      // ✅ FIX: Clean up out-of-sync credentials and hide the button
+      await BiometricService.clearCredentials();
+      setShowBiometric(false);
       setError("Profile data missing. Please login with password again.");
       return;
     }
