@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 import express from 'express';
 import cors from 'cors';
@@ -345,6 +344,57 @@ app.post('/api/admin/create-admin', authenticate, requireAdmin, async (req: any,
     }
 });
 
+// --- NEW ADDED ROUTES START (Fixing Missing Endpoints) ---
+
+// Route to DELETE a system admin/user
+app.delete('/api/admin/users/:id', authenticate, requireAdmin, async (req: any, res: any) => {
+    try {
+        const userId = req.params.id;
+
+        // Prevent admin from deleting themselves
+        if (req.user.id === userId) {
+            return res.status(400).json({ message: 'You cannot delete your own account.' });
+        }
+
+        // Check if user exists
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Delete the user
+        await prisma.user.delete({ where: { id: userId } });
+
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        console.error("Delete Admin Error:", error);
+        res.status(500).json({ message: 'Error deleting user. They may be linked to active business records.' });
+    }
+});
+
+// Route to UPDATE a system admin's password
+app.patch('/api/admin/users/:id/password', authenticate, requireAdmin, async (req: any, res: any) => {
+    try {
+        const userId = req.params.id;
+        const { password } = req.body;
+
+        if (!password || password.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword }
+        });
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        console.error("Update Password Error:", error);
+        res.status(500).json({ message: 'Error updating password' });
+    }
+});
+// --- NEW ADDED ROUTES END ---
+
 app.get('/api/admin/business/:id/users', authenticate, requireAdmin, async (req: any, res: any) => {
     try {
         const users = await prisma.user.findMany({
@@ -381,6 +431,7 @@ app.use((req, res) => {
   console.log(`404: ${req.method} ${req.url}`);
   res.status(404).json({ message: `Route ${req.method} ${req.url} not found` });
 });
+
 
 app.listen(5000)
 

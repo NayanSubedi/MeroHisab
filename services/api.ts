@@ -1,4 +1,3 @@
-
 // API Service Configuration
 
 // ---------------------------------------------------------------------------
@@ -88,7 +87,9 @@ export const api = {
     return handleResponse(response);
   },
 
-  // Admin
+  // ==========================================
+  // Admin Endpoints
+  // ==========================================
   getAllBusinesses: async (token: string) => {
     const response = await fetch(`${API_URL}/admin/businesses`, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -111,6 +112,28 @@ export const api = {
         'Authorization': `Bearer ${token}` 
       },
       body: JSON.stringify(data)
+    });
+    return handleResponse(response);
+  },
+
+  // NEW: Delete a System Admin
+  deleteSystemUser: async (id: string, token: string) => {
+    const response = await fetch(`${API_URL}/admin/users/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return handleResponse(response);
+  },
+
+  // NEW: Update a System Admin Password
+  updateSystemUserPassword: async (id: string, password: string, token: string) => {
+    const response = await fetch(`${API_URL}/admin/users/${id}/password`, {
+      method: 'PATCH', // Using PATCH since we are only updating a specific field
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+      },
+      body: JSON.stringify({ password })
     });
     return handleResponse(response);
   },
@@ -142,7 +165,9 @@ export const api = {
     return handleResponse(response);
   },
 
+  // ==========================================
   // Transactions
+  // ==========================================
   getTransactions: async (token: string) => {
     const response = await fetch(`${API_URL}/transactions`, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -170,7 +195,9 @@ export const api = {
       return handleResponse(response);
   },
 
+  // ==========================================
   // Staff Management
+  // ==========================================
   getStaff: async (token: string) => {
     const response = await fetch(`${API_URL}/users`, {
       headers: { 'Authorization': `Bearer ${token}` }
