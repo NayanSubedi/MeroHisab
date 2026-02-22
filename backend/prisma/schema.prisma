@@ -56,6 +56,7 @@ model Business {
   // Verification & Media
   // Manual verification required (Default: false)
   isVerified Boolean @default(false)
+  rejectionReason String? // Optional field to store rejection reason
   panPhoto   String? @db.Text // Large text for Base64 image
   logo       String? @db.Text // Large text for Base64 logo
   

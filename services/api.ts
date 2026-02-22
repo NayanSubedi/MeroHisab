@@ -145,18 +145,20 @@ export const api = {
       return handleResponse(response);
   },
 
-  verifyBusiness: async (id: string, isVerified: boolean, token: string) => {
+verifyBusiness: async (id: string, isVerified: boolean, token: string, reason?: string) => {
     const response = await fetch(`${API_URL}/admin/verify/${id}`, {
       method: 'PATCH',
       headers: { 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}` 
       },
-      body: JSON.stringify({ isVerified })
+      body: JSON.stringify({ 
+          isVerified, 
+          rejectionReason: reason // Send the reason to backend
+      })
     });
     return handleResponse(response);
   },
-
   removeBusiness: async (id: string, token: string) => {
     const response = await fetch(`${API_URL}/admin/business/${id}`, {
         method: 'DELETE',

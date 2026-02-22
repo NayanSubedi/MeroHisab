@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { BusinessProfile, UserRole, User } from '../types';
-import { Building2, Users, TrendingUp, AlertTriangle, Eye, ShieldCheck, Plus, Trash2, CheckCircle, XCircle, RefreshCw, X, MapPin, FileText, UserPlus, Mail, Phone, Lock, Calculator, Search } from 'lucide-react';
+import { 
+  Building2, Users, TrendingUp, AlertTriangle, Eye, ShieldCheck, 
+  Plus, Trash2, CheckCircle, XCircle, RefreshCw, X, MapPin, 
+  FileText, UserPlus, Mail, Phone, Lock, Calculator, Search, BadgeCheck 
+} from 'lucide-react';
 import { api } from '../services/api';
 
 interface AdminDashboardProps {
@@ -21,6 +25,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
   const [businessUsers, setBusinessUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   
+  // Verification & Rejection Modal State
+  const [verifyingBusiness, setVerifyingBusiness] = useState<BusinessProfile | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [isProcessingVerification, setIsProcessingVerification] = useState(false);
+
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,14 +47,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
             name: b.name,
             pan: b.pan,
             address: b.address,
-            // Granular Address Mapping
             addressLine1: b.addressLine1,
             addressLine2: b.addressLine2,
             city: b.city,
             province: b.province,
             country: b.country,
             zipCode: b.zipCode,
-
             ownerName: b.ownerName,
             phone: b.phone,
             email: b.email,
@@ -52,7 +60,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
             role: UserRole.OWNER,
             isVerified: b.isVerified,
             panPhoto: b.panPhoto,
-            // Tax Logic
             taxSystem: b.taxSystem || 'PAN',
             annualTurnover: b.annualTurnover || 0,
         }));
@@ -77,14 +84,64 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
     fetchBusinesses();
   }, []);
 
-  const handleVerify = async (id: string, currentStatus: boolean | undefined) => {
+  // Open the verification modal
+  const openVerificationModal = (business: BusinessProfile) => {
+    setVerifyingBusiness(business);
+    setRejectReason('');
+    setShowRejectInput(false);
+  };
+
+  // Handle Approve/Verify
+  const handleApprove = async () => {
+    if (!verifyingBusiness) return;
+    setIsProcessingVerification(true);
     try {
-        await api.verifyBusiness(id, !currentStatus, token);
+        await api.verifyBusiness(verifyingBusiness.id!, true, token);
+        setVerifyingBusiness(null);
         fetchBusinesses(); // Refresh list
     } catch (e) {
-        alert("Failed to update verification status");
+        alert("Failed to verify business");
+    } finally {
+        setIsProcessingVerification(false);
     }
   };
+
+  // Handle Rejection
+// Handle Rejection
+  const handleReject = async () => {
+    if (!verifyingBusiness) return;
+    if (!rejectReason.trim()) {
+        alert("Please enter a reason for rejection.");
+        return;
+    }
+    
+    setIsProcessingVerification(true);
+    try {
+        // CALL THE ACTUAL API NOW
+        // Pass 'false' for isVerified, and the 'rejectReason' string
+        await api.verifyBusiness(verifyingBusiness.id!, false, token, rejectReason);
+        
+        alert("Business rejected. The reason has been recorded.");
+        
+        setVerifyingBusiness(null);
+        fetchBusinesses(); // Refresh list to see changes
+    } catch (e) {
+        alert("Failed to reject business");
+        console.error(e);
+    } finally {
+        setIsProcessingVerification(false);
+    }
+  };
+  // Quick toggle for already verified businesses (Revoke)
+  const handleRevoke = async (id: string) => {
+    if(!window.confirm("Are you sure you want to revoke verification?")) return;
+    try {
+        await api.verifyBusiness(id, false, token);
+        fetchBusinesses();
+    } catch (e) {
+        alert("Failed to update status");
+    }
+  }
 
   const handleRemove = async (id: string) => {
     if (!window.confirm("Are you sure? This deletes the business and all users.")) return;
@@ -136,6 +193,78 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
     <div className="space-y-6 text-gray-900 dark:text-gray-100">
        {/* Modals */}
        
+       {/* Verification / Rejection Modal */}
+       {verifyingBusiness && (
+         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-70 p-4 backdrop-blur-sm" onClick={() => setVerifyingBusiness(null)}>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                        <ShieldCheck className="mr-2 text-blue-600 dark:text-blue-400" />
+                        Review Registration
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Action for: <span className="font-semibold text-gray-800 dark:text-gray-200">{verifyingBusiness.name}</span> (PAN: {verifyingBusiness.pan})
+                    </p>
+                </div>
+                
+                <div className="p-6">
+                    {!showRejectInput ? (
+                        <div className="space-y-4">
+                            <p className="text-gray-600 dark:text-gray-300">
+                                Please review the details and PAN certificate before verifying this business.
+                            </p>
+                            <div className="flex gap-4 pt-2">
+                                <button 
+                                    onClick={handleApprove}
+                                    disabled={isProcessingVerification}
+                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium flex items-center justify-center transition-colors disabled:opacity-50"
+                                >
+                                    {isProcessingVerification ? 'Processing...' : <><CheckCircle className="mr-2" size={20}/> Approve & Verify</>}
+                                </button>
+                                <button 
+                                    onClick={() => setShowRejectInput(true)}
+                                    disabled={isProcessingVerification}
+                                    className="flex-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-700 dark:text-red-400 py-3 rounded-lg font-medium flex items-center justify-center transition-colors disabled:opacity-50 border border-red-200 dark:border-red-800"
+                                >
+                                    <XCircle className="mr-2" size={20}/> Reject
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Reason for Rejection <span className="text-red-500">*</span>
+                                </label>
+                                <textarea 
+                                    value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    placeholder="e.g., Blur PAN photo, Mismatched details..."
+                                    className="w-full h-32 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none resize-none"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button 
+                                    onClick={() => setShowRejectInput(false)}
+                                    className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 rounded-lg font-medium transition-colors"
+                                >
+                                    Back
+                                </button>
+                                <button 
+                                    onClick={handleReject}
+                                    disabled={!rejectReason.trim() || isProcessingVerification}
+                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isProcessingVerification ? 'Rejecting...' : 'Confirm Rejection'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+         </div>
+       )}
+
        {/* PAN Certificate Modal - z-[60] so it overlays on top of the selected business modal */}
        {selectedCertificate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-80 p-4" onClick={() => setSelectedCertificate(null)}>
@@ -212,7 +341,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                    {businessUsers.map(u => (
                                        <tr key={u.id}>
-                                           <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{u.name}</td>
+                                           <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+                                               {u.name}
+                                           </td>
                                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                                <span className={`px-2 py-0.5 rounded text-xs ${u.role === UserRole.OWNER ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
                                                    {u.role}
@@ -237,7 +368,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
                 <div className="bg-slate-900 dark:bg-slate-950 text-white p-6 flex justify-between items-start">
                     <div>
-                        <h2 className="text-2xl font-bold">{selectedBusiness.name}</h2>
+                        <h2 className="text-2xl font-bold flex items-center">
+                            {selectedBusiness.name}
+                            {selectedBusiness.isVerified && <BadgeCheck className="ml-2 text-blue-400" size={24} />}
+                        </h2>
                         <div className="flex items-center space-x-3 mt-1">
                             <span className="text-slate-300 text-sm">PAN: {selectedBusiness.pan}</span>
                             <span className={`text-xs px-2 py-0.5 rounded font-bold ${selectedBusiness.taxSystem === 'VAT' ? 'bg-blue-600 text-white' : 'bg-gray-600 text-gray-200'}`}>
@@ -451,7 +585,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                                 {biz.name.charAt(0)}
                             </div>
                             <div>
-                                <div className="font-medium text-gray-900 dark:text-white">{biz.name}</div>
+                                <div className="font-medium text-gray-900 dark:text-white flex items-center">
+                                    {biz.name}
+                                </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">PAN: {biz.pan}</div>
                             </div>
                          </div>
@@ -477,7 +613,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                          <div className="flex items-center justify-center space-x-3">
                             <button onClick={() => setSelectedBusiness(biz)} className="p-1 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30" title="View Full Details"><FileText size={18} /></button>
-                            <button onClick={() => handleVerify(biz.id!, biz.isVerified)} className="p-1 rounded text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30" title="Verify Business"><ShieldCheck size={18} /></button>
+                            <button onClick={() => openVerificationModal(biz)} className="p-1 rounded text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30" title="Verify Business"><ShieldCheck size={18} /></button>
                              <button onClick={() => handleRemove(biz.id!)} className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Remove Business"><Trash2 size={18} /></button>
                          </div>
                       </td>
@@ -518,7 +654,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                                 {biz.name.charAt(0)}
                             </div>
                             <div>
-                                <div className="font-medium text-gray-900 dark:text-white">{biz.name}</div>
+                                <div className="font-medium text-gray-900 dark:text-white flex items-center">
+                                    {biz.name}
+                                    <BadgeCheck className="ml-1 text-blue-500" size={16} />
+                                </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">PAN: {biz.pan}</div>
                             </div>
                          </div>
@@ -545,7 +684,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                          <div className="flex items-center justify-center space-x-3">
                             <button onClick={() => setSelectedBusiness(biz)} className="p-1 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30" title="View Full Details"><FileText size={18} /></button>
                             <button onClick={() => handleViewUsers(biz.id!)} className="p-1 rounded text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30" title="View Staff"><Users size={18} /></button>
-                            <button onClick={() => handleVerify(biz.id!, biz.isVerified)} className="p-1 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30" title="Revoke Verification"><ShieldCheck size={18} /></button>
+                            <button onClick={() => handleRevoke(biz.id!)} className="p-1 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30" title="Revoke Verification"><ShieldCheck size={18} /></button>
                             <button onClick={() => handleRemove(biz.id!)} className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Remove Business"><Trash2 size={18} /></button>
                          </div>
                       </td>

@@ -413,9 +413,34 @@ app.get('/api/admin/business/:id/users', authenticate, requireAdmin, async (req:
 
 app.patch('/api/admin/verify/:id', authenticate, requireAdmin, async (req: any, res: any) => {
     try {
-        const updated = await prisma.business.update({ where: { id: req.params.id }, data: { isVerified: req.body.isVerified } });
+        const { isVerified, rejectionReason } = req.body;
+        
+        const updateData: any = { 
+            isVerified: isVerified 
+        };
+
+        // Logic: 
+        // If Verifying (true): Clear any previous rejection reason.
+        // If Rejecting (false): Save the rejection reason if provided.
+        if (isVerified) {
+            updateData.rejectionReason = null; 
+        } else if (rejectionReason) {
+            updateData.rejectionReason = rejectionReason;
+        }
+
+        const updated = await prisma.business.update({ 
+            where: { id: req.params.id }, 
+            data: updateData 
+        });
+
+        // Optional: Send Email Notification Logic Here
+        // if (!isVerified && rejectionReason) { sendRejectionEmail(updated.email, rejectionReason); }
+
         res.json(updated);
-    } catch (error) { res.status(500).json({ message: 'Error updating status' }); }
+    } catch (error) { 
+        console.error(error);
+        res.status(500).json({ message: 'Error updating status' }); 
+    }
 });
 
 app.delete('/api/admin/business/:id', authenticate, requireAdmin, async (req: any, res: any) => {
