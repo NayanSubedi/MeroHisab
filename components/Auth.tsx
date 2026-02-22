@@ -52,16 +52,29 @@ const handleBiometricLogin = async () => {
       return;
     }
 
-    // ✅ Use Preferences (NOT localStorage)
+    // ✅ NEW FIX: Check if the token has mathematically expired before logging in
+    try {
+      const base64Url = creds.token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const tokenPayload = JSON.parse(window.atob(base64));
+      
+      if (tokenPayload.exp * 1000 < Date.now()) {
+        await BiometricService.clearCredentials(); // Clear the dead token
+        setError("Security session expired. Please login with password to renew.");
+        return;
+      }
+    } catch (e) {
+      console.error("Error decoding token", e);
+    }
+
     const { value } = await Preferences.get({ key: 'userProfile' });
 
     if (!value) {
-      setError("Session expired. Please login with password again.");
+      setError("Profile data missing. Please login with password again.");
       return;
     }
 
     const parsedProfile = JSON.parse(value);
-
     onLogin(parsedProfile, creds.token);
 
   } catch (error) {

@@ -3,6 +3,7 @@ import { BusinessProfile } from '../types';
 import { api } from '../services/api';
 import { BiometricService } from '../services/biometricService';
 import { Save, Lock, User, Building, MapPin, CheckCircle, AlertCircle, Camera, Fingerprint } from 'lucide-react';
+import { Preferences } from '@capacitor/preferences';
 
 interface ProfileSettingsProps {
   userProfile: BusinessProfile;
@@ -127,7 +128,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
         };
 
         // Update local storage and app state
-        localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+// ✅ Add this
+await Preferences.set({
+  key: 'userProfile',
+  value: JSON.stringify(updatedProfile),
+});
         
         // Ensure Biometric service state matches UI
         if (!enableBiometric) {

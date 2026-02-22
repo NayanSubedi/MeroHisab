@@ -1,22 +1,29 @@
-
 import React, { useState } from 'react';
 import { Transaction, TransactionType } from '../types';
 import { 
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip
-} from 'recharts';
-import { TrendingUp, TrendingDown, AlertTriangle, Wallet, Plus, FileText, ChevronRight, X, Calendar, Hash, User, Tag, Camera } from 'lucide-react';
+  TrendingUp, TrendingDown, AlertTriangle, Wallet, FileText, ChevronRight, X, Camera, RefreshCw
+} from 'lucide-react';
 
 interface DashboardProps {
   transactions: Transaction[];
   onQuickAction: (action: string) => void;
+  onRefresh?: () => Promise<void>; // Add this prop
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction }) => {
+const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRefresh }) => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Calls the refresh function from App.tsx and waits for it to finish
+  const handleRefresh = async () => {
+    if (!onRefresh) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Calculations
   const totalSales = transactions
@@ -27,31 +34,26 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction }) =>
     .filter(t => t.type === TransactionType.EXPENSE)
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const netProfit = totalSales - totalExpenses;
   const currentCashBalance = 50000 + totalSales - totalExpenses;
   const complianceIssues = transactions.filter(t => t.isComplianceIssue);
 
-  const expenseByCategory = transactions
-    .filter(t => t.type === TransactionType.EXPENSE)
-    .reduce((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + t.amount;
-      return acc;
-    }, {} as Record<string, number>);
-
-  const pieData = Object.keys(expenseByCategory).map(key => ({
-    name: key,
-    value: expenseByCategory[key]
-  }));
-
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6366F1'];
-
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+      
+      {/* Header with Refresh Button */}
+      <div className="flex justify-between items-center">
         <div>
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Overview</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">Fiscal Year: 2080/81</p>
         </div>
+        <button 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title="Refresh Data"
+            className="p-2.5 bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition active:scale-95 disabled:opacity-50 flex items-center justify-center"
+        >
+            <RefreshCw size={20} className={`text-blue-600 dark:text-blue-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Main Stats Card */}
@@ -112,10 +114,10 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction }) =>
              </div>
              <div className="space-y-3">
                 {complianceIssues.slice(0, 3).map((issue) => (
-                  <div key={issue.id} onClick={() => setSelectedTransaction(issue)} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm flex justify-between items-center active:bg-gray-50">
+                  <div key={issue.id} onClick={() => setSelectedTransaction(issue)} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm flex justify-between items-center active:bg-gray-50 cursor-pointer">
                      <div className="flex-1">
                         <p className="text-xs font-bold text-red-600 dark:text-red-400">{issue.complianceMessage}</p>
-                        <p className="text-xs text-gray-500 mt-1">{issue.date} • NPR {issue.amount.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500 mt-1">{issue.date.split('T')[0]} • NPR {issue.amount.toLocaleString()}</p>
                      </div>
                      <ChevronRight size={16} className="text-gray-400" />
                   </div>
@@ -124,16 +126,14 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction }) =>
           </div>
       )}
 
-
-
       {/* Transaction Modal */}
       {selectedTransaction && (
-         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedTransaction(null)}>
+         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedTransaction(null)}>
             <div className="bg-white dark:bg-gray-800 rounded-3xl md:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom-10 duration-200" onClick={e => e.stopPropagation()}>
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-gray-800 dark:text-white">Transaction Details</h3>
-                        <button onClick={() => setSelectedTransaction(null)} className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full">
+                        <button onClick={() => setSelectedTransaction(null)} className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition">
                             <X size={20} className="text-gray-600 dark:text-gray-300"/>
                         </button>
                     </div>
@@ -145,7 +145,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction }) =>
                         <p className="text-sm text-gray-500 mt-1">{selectedTransaction.category}</p>
                     </div>
 
-                    <div className="space-y-4 bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl">
+                    <div className="space-y-4 bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-gray-100 dark:border-gray-700">
                          <div className="flex justify-between">
                             <span className="text-sm text-gray-500 dark:text-gray-400">Date</span>
                             <span className="text-sm font-medium dark:text-gray-200">{selectedTransaction.date.split('T')[0]}</span>
