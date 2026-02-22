@@ -327,7 +327,7 @@ if (profile.enableBiometricLogin) {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">PAN (9 Digits) *</label>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">PAN/VAT (9 Digits) *</label>
                             <input required type="text" maxLength={9} value={pan} onChange={e => setPan(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
                         </div>
                          <div>
@@ -456,8 +456,8 @@ if (profile.enableBiometricLogin) {
                             ) : (
                                 <>
                                     <UploadCloud className="mx-auto h-8 w-8 text-gray-400" />
-                                    <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mt-1">Upload PAN Certificate *</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">JPG or PNG (Max 5MB)</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mt-1">Upload PAN/VAT Certificate *</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">JPG, PNG or PDF (Max 5MB)</p>
                                 </>
                             )}
                         </div>
