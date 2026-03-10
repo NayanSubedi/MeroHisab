@@ -188,7 +188,17 @@ verifyBusiness: async (id: string, isVerified: boolean, token: string, reason?: 
     });
     return handleResponse(response);
   },
-
+updateTransaction: async (id: string, data: any, token: string) => {
+    const response = await fetch(`${API_URL}/transactions/${id}`, {
+        method: 'PUT',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(data)
+    });
+    return handleResponse(response);
+},
   deleteTransaction: async (id: string, token: string) => {
       const response = await fetch(`${API_URL}/transactions/${id}`, {
           method: 'DELETE',

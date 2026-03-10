@@ -1,5 +1,3 @@
-// This service is designed to connect to your custom AI model backend.
-
 export interface ExtractedBillData {
   billNumber: string | null;
   date: string | null;
@@ -10,62 +8,90 @@ export interface ExtractedBillData {
   category: string | null;
 }
 
-// Configuration for your Custom Model
-const CUSTOM_MODEL_API_URL = "http://192.168.1.64:8000/api/predict"; // Replace with your actual backend URL
-const USE_MOCK_DATA = true; // Set to FALSE when your backend is ready
+const CUSTOM_MODEL_API_URL = "https://inefficient-lael-substructural.ngrok-free.dev/api/extract";
 
-export const analyzeBillImage = async (base64Image: string): Promise<ExtractedBillData> => {
-  
-  // 1. If using mock data (for UI testing before model is ready)
-  if (USE_MOCK_DATA) {
-    console.log("Using Mock Data (Switch USE_MOCK_DATA to false in services/aiService.ts to use your model)");
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate latency
-    
-    return {
-      billNumber: "INV-" + Math.floor(Math.random() * 10000),
-      date: new Date().toISOString().split('T')[0],
-      vendorName: "Nepal Local Suppliers",
-      vendorPan: "102030405",
-      amount: 2500,
-      vatAmount: 325,
-      category: "Office Supplies"
-    };
+// Helper function to convert base64 to a Blob (File)
+const base64ToBlob = (base64: string, contentType = 'image/jpeg'): Blob => {
+  const byteCharacters = atob(base64);
+  const byteArrays =[];
+
+  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+    const slice = byteCharacters.slice(offset, offset + 512);
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
   }
 
-  // 2. Integration with your Custom AI Model
+  return new Blob(byteArrays, { type: contentType });
+};
+
+export const analyzeBillImage = async (base64Image: string): Promise<ExtractedBillData> => {
   try {
-    // Assuming your API expects a JSON body with a 'image' field containing base64 data
+    console.log("Preparing image for Upload...");
+
+    // 1. Convert Base64 back to a File/Blob
+    const imageBlob = base64ToBlob(base64Image);
+    
+    // 2. Create FormData (This matches `file: UploadFile = File(...)` in Python)
+    const formData = new FormData();
+    formData.append('file', imageBlob, 'receipt.jpg');
+
+    console.log("Sending request to AI API...");
     const response = await fetch(CUSTOM_MODEL_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        // 'Authorization': 'Bearer YOUR_TOKEN' // If your API requires auth
+        // DO NOT set 'Content-Type': 'application/json' here!
+        // The browser will automatically set it to multipart/form-data with the correct boundaries.
+        'ngrok-skip-browser-warning': 'true' // Bypasses ngrok warning screen
       },
-      body: JSON.stringify({
-        image: base64Image
-      })
+      body: formData // Sending as a File upload
     });
 
+    const textResponse = await response.text();
+    console.log("RAW AI RESPONSE:", textResponse); 
+
     if (!response.ok) {
-      throw new Error(`Model API Error: ${response.statusText}`);
+      throw new Error(`API Error ${response.status}: ${textResponse}`);
     }
 
-    const data = await response.json();
-    
-    // Ensure your API returns data matching the ExtractedBillData interface
-    // or map it here:
+    // Parse the response
+    let result;
+    try {
+      result = JSON.parse(textResponse);
+    } catch (e) {
+      throw new Error("Failed to parse API response. The API might have returned an HTML error.");
+    }
+
+    // 3. Handle Python API's error status
+    if (result.status === "error") {
+      console.error("AI Model Raw Output:", result.raw_output);
+      throw new Error("AI Model failed to structure the JSON correctly.");
+    }
+
+    // 4. Extract data from the Python API's success wrapper
+    const data = result.data;
+
+    // Validate structure
+    if (!data.store_info || !data.payment_info || !data.total) {
+      console.error("Missing expected keys. Found:", data);
+      throw new Error("Incomplete data structure returned from AI.");
+    }
+
     return {
-        billNumber: data.bill_number || null,
-        date: data.date || null,
-        vendorName: data.vendor_name || null,
-        vendorPan: data.vendor_pan || null,
-        amount: parseFloat(data.total_amount) || 0,
-        vatAmount: parseFloat(data.vat_amount) || 0,
-        category: data.category || "Miscellaneous"
+        vendorName: data.store_info.name || null,
+        vendorPan: data.store_info.tax_id || null,
+        date: data.payment_info.date || null,
+        billNumber: data.payment_info.invoice_receipt_id || null,
+        amount: parseFloat(data.total.total_price) || null,
+        vatAmount: 0, 
+        category: "PURCHASE" 
     };
 
   } catch (error) {
-    console.error("Failed to connect to custom model:", error);
-    throw error;
+    console.error("AI Analysis Execution Failed:", error);
+    throw error; // Let BillUpload.tsx handle the alert
   }
 };

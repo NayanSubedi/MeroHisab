@@ -240,6 +240,25 @@ app.post('/api/transactions', authenticate, async (req: any, res: any) => {
     }
 });
 
+app.put('/api/transactions/:id', authenticate, async (req: any, res: any) => {
+    try {
+        const { id } = req.params;
+        const { date, amount, ...updateData } = req.body;
+
+        const updated = await prisma.transaction.update({
+            where: { id: id, businessId: req.user.businessId },
+            data: {
+                ...updateData,
+                amount: parseFloat(amount),
+                date: new Date(date)
+            }
+        });
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating transaction' });
+    }
+});
+
 app.delete('/api/transactions/:id', authenticate, async (req: any, res: any) => {
     try {
         if (!req.user.businessId) return res.status(403).json({ message: 'Unauthorized' });

@@ -4,6 +4,7 @@ import { BusinessProfile, UserRole } from '../types';
 import { api } from '../services/api';
 import { BiometricService } from '../services/biometricService';
 import { Preferences } from '@capacitor/preferences'
+
 interface AuthProps {
   onLogin: (profile: BusinessProfile, token: string) => void;
 }
@@ -18,82 +19,80 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   // Biometric State
   const [showBiometric, setShowBiometric] = useState(false);
 
-useEffect(() => {
-  checkBiometrics();
-}, []);
+  useEffect(() => {
+    checkBiometrics();
+  }, []);
 
-// Inside Auth.tsx
+  const checkBiometrics = async () => {
+    const isHardwareAvailable = await BiometricService.isAvailable();
+    const storedCredentials = await BiometricService.getCredentials(); 
+    
+    // Check if the profile exists in Preferences
+    const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
 
-const checkBiometrics = async () => {
-  const isHardwareAvailable = await BiometricService.isAvailable();
-  const storedCredentials = await BiometricService.getCredentials(); 
-  
-  // ✅ FIX: Also check if the profile exists in Preferences
-  const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
-
-  // Only show biometric option if ALL data is present
-  if (isHardwareAvailable && storedCredentials && storedProfile) {
-    setShowBiometric(true);
-  } else {
-    setShowBiometric(false);
-  }
-};
-
-const handleBiometricLogin = async () => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const verified = await BiometricService.verifyIdentity();
-
-    if (!verified) {
-      setError("Biometric authentication failed.");
-      return;
+    // Only show biometric option if ALL data is present
+    if (isHardwareAvailable && storedCredentials && storedProfile) {
+      setShowBiometric(true);
+    } else {
+      setShowBiometric(false);
     }
+  };
 
-    const creds = await BiometricService.getCredentials();
+  const handleBiometricLogin = async () => {
+    setLoading(true);
+    setError(null);
 
-    if (!creds || !creds.token) {
-      setError("Session expired. Please login with password again.");
-      return;
-    }
-
-    // Check if the token has mathematically expired before logging in
     try {
-      const base64Url = creds.token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const tokenPayload = JSON.parse(window.atob(base64));
-      
-      if (tokenPayload.exp * 1000 < Date.now()) {
-        await BiometricService.clearCredentials(); // Clear the dead token
-        setError("Security session expired. Please login with password to renew.");
-        setShowBiometric(false); // Hide button
+      const verified = await BiometricService.verifyIdentity();
+
+      if (!verified) {
+        setError("Biometric authentication failed.");
         return;
       }
-    } catch (e) {
-      console.error("Error decoding token", e);
+
+      const creds = await BiometricService.getCredentials();
+
+      if (!creds || !creds.token) {
+        setError("Session expired. Please login with password again.");
+        return;
+      }
+
+      // Check if the token has mathematically expired before logging in
+      try {
+        const base64Url = creds.token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const tokenPayload = JSON.parse(window.atob(base64));
+        
+        if (tokenPayload.exp * 1000 < Date.now()) {
+          await BiometricService.clearCredentials(); // Clear the dead token
+          setError("Security session expired. Please login with password to renew.");
+          setShowBiometric(false); // Hide button
+          return;
+        }
+      } catch (e) {
+        console.error("Error decoding token", e);
+      }
+
+      const { value } = await Preferences.get({ key: 'userProfile' });
+
+      if (!value) {
+        // Clean up out-of-sync credentials and hide the button
+        await BiometricService.clearCredentials();
+        setShowBiometric(false);
+        setError("Profile data missing. Please login with password again.");
+        return;
+      }
+
+      const parsedProfile = JSON.parse(value);
+      onLogin(parsedProfile, creds.token);
+
+    } catch (error) {
+      console.error("Bio Login Error", error);
+      setError("Biometric authentication failed.");
+    } finally {
+      setLoading(false);
     }
-
-    const { value } = await Preferences.get({ key: 'userProfile' });
-
-    if (!value) {
-      // ✅ FIX: Clean up out-of-sync credentials and hide the button
-      await BiometricService.clearCredentials();
-      setShowBiometric(false);
-      setError("Profile data missing. Please login with password again.");
-      return;
-    }
-
-    const parsedProfile = JSON.parse(value);
-    onLogin(parsedProfile, creds.token);
-
-  } catch (error) {
-    console.error("Bio Login Error", error);
-    setError("Biometric authentication failed.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Form States
   const [phone, setPhone] = useState('');
@@ -182,28 +181,27 @@ const handleBiometricLogin = async () => {
       };
 
       // Persist to Local Storage
-await Preferences.set({
-  key: 'token',
-  value: data.token,
-});
+      await Preferences.set({
+        key: 'token',
+        value: data.token,
+      });
 
-await Preferences.set({
-  key: 'userProfile',
-  value: JSON.stringify(profile),
-});
-// ✅ Store biometric credentials if enabled
-if (profile.enableBiometricLogin) {
-  await BiometricService.setCredentials(
-    profile.email || profile.phone,
-    data.token
-  );
-} else {
-  await BiometricService.clearCredentials();
-}
+      await Preferences.set({
+        key: 'userProfile',
+        value: JSON.stringify(profile),
+      });
+
+      // Store biometric credentials if enabled
+      if (profile.enableBiometricLogin) {
+        await BiometricService.setCredentials(
+          profile.email || profile.phone,
+          data.token
+        );
+      } else {
+        await BiometricService.clearCredentials();
+      }
       
       // Update biometric preference if enabled on server
-      // Note: Actual hardware enablement happens in ProfileSettings, 
-      // but we respect the server flag to prompt user or sync state.
       if (!profile.enableBiometricLogin) {
           BiometricService.clearCredentials();
       }
@@ -503,27 +501,25 @@ if (profile.enableBiometricLogin) {
                   {loading ? 'Logging In...' : 'Sign In'}
                 </button>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
-                  </div>
-                </div>
+                {showBiometric && (
+                  <>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
+                      </div>
+                    </div>
 
-                <div className="mt-2 grid grid-cols-1 gap-3">
-                    {showBiometric ? (
+                    <div className="mt-2 grid grid-cols-1 gap-3">
                         <button onClick={handleBiometricLogin} type="button" className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
                             {loading ? <div className="h-5 w-5 border-2 border-gray-300 border-t-purple-600 rounded-full animate-spin mr-2"/> : <Fingerprint size={20} className="mr-2 text-purple-600 dark:text-purple-400" />}
                             Biometric Login
                         </button>
-                    ) : (
-                        <div className="text-center text-xs text-gray-400 italic py-1">
-                            Biometric login available after first successful login (if enabled in settings).
-                        </div>
-                    )}
-                </div>
+                    </div>
+                  </>
+                )}
             </form>
           )}
 
