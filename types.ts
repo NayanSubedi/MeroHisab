@@ -11,14 +11,19 @@ export enum TransactionType {
 }
 
 export enum ExpenseCategory {
-  PURCHASE = 'Purchase',
-  RENT = 'Rent',
-  SALARY = 'Salary/Wages',
-  UTILITIES = 'Utilities',
-  TRANSPORTATION = 'Transportation',
+  FUEL_TRANSPORT = 'Fuel & Transport',
   OFFICE_SUPPLIES = 'Office Supplies',
-  MARKETING = 'Marketing',
-  LOAN_REPAYMENT = 'Loan Repayment',
+  FOOD_BEVERAGE = 'Food & Beverage',
+  GROCERIES = 'Groceries',
+  UTILITIES = 'Utilities',
+  REPAIR_MAINTENANCE = 'Repair & Maintenance',
+  RENT = 'Rent',
+  PROFESSIONAL_SERVICES = 'Professional Services',
+  HARDWARE_ELECTRONICS = 'Hardware & Electronics',
+  MEDICAL_HEALTH = 'Medical & Health',
+  TRAVEL_LODGING = 'Travel & Lodging',
+  CLOTHING_RETAIL = 'Clothing & Retail',
+  BOOKS_STATIONERY = 'Books & Stationery',
   MISC = 'Miscellaneous'
 }
 
@@ -63,8 +68,6 @@ export interface Transaction {
   partyPan?: string;
   billNumber?: string;
   imageUrl?: string;
-  isComplianceIssue?: boolean;
-  complianceMessage?: string;
   invoiceDetails?: InvoiceDetails;
 }
 

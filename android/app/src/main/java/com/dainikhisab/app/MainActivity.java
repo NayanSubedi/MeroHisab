@@ -1,4 +1,4 @@
-package com.merohisab.app;
+package com.dainikhisab.app;
 
 import com.getcapacitor.BridgeActivity;
 

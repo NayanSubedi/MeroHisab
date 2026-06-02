@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.merohisab.app',
+  appId: 'com.dainikhisab.app',
   appName: 'Mero Hisab',
   webDir: 'dist',
   server: {

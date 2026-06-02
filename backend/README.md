@@ -1,6 +1,6 @@
-# MeroHisab Backend Setup
+# Dainikhisab Backend Setup
 
-This is the backend service for MeroHisab, built with Node.js, Express, Prisma, and PostgreSQL.
+This is the backend service for Dainikhisab, built with Node.js, Express, Prisma, and PostgreSQL.
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ Open `.env` and add the following configuration. Replace `user`, `password`, and
 
 ```env
 # Format: postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=SCHEMA
-DATABASE_URL="postgresql://postgres:password@localhost:5432/merohisab?schema=public"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/dainikhisab?schema=public"
 
 # Secret key for signing JWT tokens (Change this to a long random string)
 JWT_SECRET="your-super-secret-key-change-this"

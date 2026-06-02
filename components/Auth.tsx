@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, UploadCloud, CheckCircle, Smartphone, Mail, Fingerprint, AlertCircle, MapPin, Calculator } from 'lucide-react';
+import { Eye, EyeOff, UploadCloud, CheckCircle, Smartphone, Mail, Fingerprint, AlertCircle, MapPin, Calculator, ShieldCheck, User, Building, Phone, Key, ArrowRight, Loader2 } from 'lucide-react';
 import { BusinessProfile, UserRole } from '../types';
 import { api } from '../services/api';
 import { BiometricService } from '../services/biometricService';
@@ -19,18 +19,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   // Biometric State
   const [showBiometric, setShowBiometric] = useState(false);
 
-  useEffect(() => {
-    checkBiometrics();
-  }, []);
+  useEffect(() => { checkBiometrics(); }, []);
 
   const checkBiometrics = async () => {
     const isHardwareAvailable = await BiometricService.isAvailable();
     const storedCredentials = await BiometricService.getCredentials(); 
-    
-    // Check if the profile exists in Preferences
     const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
 
-    // Only show biometric option if ALL data is present
     if (isHardwareAvailable && storedCredentials && storedProfile) {
       setShowBiometric(true);
     } else {
@@ -39,55 +34,36 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   const handleBiometricLogin = async () => {
-    setLoading(true);
-    setError(null);
-
+    setLoading(true); setError(null);
     try {
       const verified = await BiometricService.verifyIdentity();
-
-      if (!verified) {
-        setError("Biometric authentication failed.");
-        return;
-      }
-
+      if (!verified) { setError("Biometric authentication failed."); return; }
+      
       const creds = await BiometricService.getCredentials();
+      if (!creds || !creds.token) { setError("Session expired. Please login with password again."); return; }
 
-      if (!creds || !creds.token) {
-        setError("Session expired. Please login with password again.");
-        return;
-      }
-
-      // Check if the token has mathematically expired before logging in
       try {
         const base64Url = creds.token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         const tokenPayload = JSON.parse(window.atob(base64));
-        
         if (tokenPayload.exp * 1000 < Date.now()) {
-          await BiometricService.clearCredentials(); // Clear the dead token
-          setError("Security session expired. Please login with password to renew.");
-          setShowBiometric(false); // Hide button
+          await BiometricService.clearCredentials();
+          setError("Session expired. Please login with password to renew.");
+          setShowBiometric(false);
           return;
         }
-      } catch (e) {
-        console.error("Error decoding token", e);
-      }
+      } catch (e) {}
 
       const { value } = await Preferences.get({ key: 'userProfile' });
-
       if (!value) {
-        // Clean up out-of-sync credentials and hide the button
         await BiometricService.clearCredentials();
         setShowBiometric(false);
         setError("Profile data missing. Please login with password again.");
         return;
       }
 
-      const parsedProfile = JSON.parse(value);
-      onLogin(parsedProfile, creds.token);
-
+      onLogin(JSON.parse(value), creds.token);
     } catch (error) {
-      console.error("Bio Login Error", error);
       setError("Biometric authentication failed.");
     } finally {
       setLoading(false);
@@ -102,63 +78,43 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [ownerName, setOwnerName] = useState('');
   const [email, setEmail] = useState('');
   const [businessType, setBusinessType] = useState('Sole Proprietor');
-
-  // Tax Logic States
   const [taxSystem, setTaxSystem] = useState<'PAN' | 'VAT'>('PAN');
   const [annualTurnover, setAnnualTurnover] = useState('');
-
-  // Detailed Address States
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
   const [country, setCountry] = useState('Nepal');
   const [zipCode, setZipCode] = useState('');
-  
-  // New State for File Upload
   const [panPhoto, setPanPhoto] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-        // Check file size (e.g., max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            setError("File size too large. Max 5MB allowed.");
-            return;
+            setError("File size too large. Max 5MB allowed."); return;
         }
-
         const reader = new FileReader();
-        reader.onloadend = () => {
-            setPanPhoto(reader.result as string);
-            setError(null);
-        };
+        reader.onloadend = () => { setPanPhoto(reader.result as string); setError(null); };
         reader.readAsDataURL(file);
     }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
+    e.preventDefault(); setLoading(true); setError(null);
     try {
-      // API call returns the data directly (throws if error)
       const data = await api.login({ identifier: phone, password });
-
-      // Helper for business type mapping
       const getBusinessType = (t: string) => {
           if (t === 'PVT_LTD') return 'Pvt Ltd';
           if (t === 'PARTNERSHIP') return 'Partnership';
           return 'Sole Proprietor';
       };
 
-      // Map backend response to frontend BusinessProfile
       const profile: BusinessProfile = {
         id: data.business ? data.business.id : 'admin',
         name: data.business ? data.business.name : data.user.name,
         pan: data.business ? data.business.pan : 'N/A',
         address: data.business ? data.business.address : 'N/A',
-        // Detailed fields
         addressLine1: data.business?.addressLine1,
         addressLine2: data.business?.addressLine2,
         city: data.business?.city,
@@ -166,368 +122,349 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         country: data.business?.country,
         zipCode: data.business?.zipCode,
         logo: data.business?.logo,
-
         ownerName: data.user.name,
         email: data.user.email,
         phone: data.user.phone || '',
         type: data.business ? getBusinessType(data.business.type) : 'Sole Proprietor',
         role: data.user.role as UserRole,
         isVerified: data.business ? data.business.isVerified : true,
-
-        // Tax fields
         taxSystem: data.business?.taxSystem || 'PAN',
         annualTurnover: data.business?.annualTurnover || 0,
         enableBiometricLogin: data.business?.enableBiometricLogin || false
       };
 
-      // Persist to Local Storage
-      await Preferences.set({
-        key: 'token',
-        value: data.token,
-      });
+      await Preferences.set({ key: 'token', value: data.token });
+      await Preferences.set({ key: 'userProfile', value: JSON.stringify(profile) });
 
-      await Preferences.set({
-        key: 'userProfile',
-        value: JSON.stringify(profile),
-      });
-
-      // Store biometric credentials if enabled
       if (profile.enableBiometricLogin) {
-        await BiometricService.setCredentials(
-          profile.email || profile.phone,
-          data.token
-        );
+        await BiometricService.setCredentials(profile.email || profile.phone, data.token);
       } else {
         await BiometricService.clearCredentials();
       }
       
-      // Update biometric preference if enabled on server
-      if (!profile.enableBiometricLogin) {
-          BiometricService.clearCredentials();
-      }
-
       onLogin(profile, data.token);
-
     } catch (err: any) {
-      console.error("Login Error:", err);
-      // Handle Specific Errors
-      if (err.message === 'Failed to fetch') {
-         setError("Cannot reach server. Ensure backend is running.");
-      } else if (err.code === 'PENDING_VERIFICATION') {
-         setError("Account Pending: Your business is awaiting Admin verification.");
-      } else {
-         setError(err.message || "Login failed");
-      }
+      if (err.message === 'Failed to fetch') setError("Cannot reach server. Ensure backend is running.");
+      else if (err.code === 'PENDING_VERIFICATION') setError("Account Pending: Your business is awaiting Admin verification.");
+      else setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMsg(null);
-
-    // Basic Validation
-    if (pan.length !== 9 || isNaN(Number(pan))) {
-      setError("PAN must be a 9-digit number.");
-      return;
-    }
-    
-    // Ensure file is uploaded
-    if (!panPhoto) {
-        setError("Please upload your PAN certificate image.");
-        return;
-    }
+    e.preventDefault(); setError(null); setSuccessMsg(null);
+    if (pan.length !== 9 || isNaN(Number(pan))) { setError("PAN must be a 9-digit number."); return; }
+    if (!panPhoto) { setError("Please upload your PAN certificate image."); return; }
 
     setLoading(true);
-
     try {
       const payload = {
-        businessName,
-        pan,
-        ownerName,
-        phone,
-        email,
-        type: businessType,
-        password,
-        panPhoto, // Send the base64 image string
-        // Detailed Address
-        addressLine1, addressLine2, city, province, country, zipCode,
-        // Tax
-        taxSystem,
+        businessName, pan, ownerName, phone, email, type: businessType, password, panPhoto,
+        addressLine1, addressLine2, city, province, country, zipCode, taxSystem,
         annualTurnover: annualTurnover ? parseFloat(annualTurnover) : 0
       };
-
-      // API returns data directly (throws if error)
       await api.register(payload);
-
-      setSuccessMsg("Registration Successful! Your account is now pending Admin Verification. You cannot login until verified.");
-      setIsRegister(false); // Switch back to login view
-      // Clear sensitive fields
-      setPassword('');
-      setPanPhoto(null);
-      
+      setSuccessMsg("Registration Successful! Your account is pending Admin Verification.");
+      setIsRegister(false);
+      setPassword(''); setPanPhoto(null);
     } catch (err: any) {
-      if (err.message === 'Failed to fetch') {
-          setError("Cannot reach server. Ensure backend is running.");
-      } else {
-          setError(err.message || "Registration failed");
-      }
+      if (err.message === 'Failed to fetch') setError("Cannot reach server. Ensure backend is running.");
+      else setError(err.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
+  const inputClass = "w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-white px-4 py-3.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500 font-medium";
+  const labelClass = "block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider ml-1";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-indigo-800 flex items-center justify-center p-4">
-      <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full ${isRegister ? 'max-w-3xl' : 'max-w-md'} overflow-hidden transition-all duration-300`}>
-        <div className="p-8">
-            <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">MeroHisab</h1>
-                <p className="text-gray-500 dark:text-gray-400">{isRegister ? "Register your Business" : "Secure Login"}</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row">
+      
+      {/* Left / Top Panel - Branding */}
+      <div className={`relative flex flex-col justify-center px-8 py-12 md:p-20 transition-all duration-500 bg-gradient-to-br from-blue-700 via-indigo-800 to-indigo-950 ${isRegister ? 'md:w-[35%]' : 'md:w-1/2'}`}>
+        
+        {/* Decorative background elements */}
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/20 rounded-full blur-3xl -mr-20 -mt-20 mix-blend-screen pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-500/20 rounded-full blur-3xl -ml-20 -mb-20 mix-blend-screen pointer-events-none" />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none" />
+
+        <div className="relative z-10 text-white max-w-md mx-auto w-full">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-xl">
+              <Building size={24} className="text-white" />
             </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Dainikhisab</h1>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">
+            {isRegister ? 'Join the future of MSME accounting.' : 'Welcome back to your dashboard.'}
+          </h2>
+          <p className="text-blue-100 text-lg opacity-90 leading-relaxed font-medium">
+            {isRegister 
+              ? 'Register your business today and get AI-powered insights, automated bill scanning, and effortless tax compliance.' 
+              : 'Log in to securely manage your transactions, predict cash flow, and track your business growth in real-time.'}
+          </p>
+          
+          {/* Feature highlights (Login only) */}
+          {!isRegister && (
+            <div className="mt-12 space-y-4 hidden md:block">
+              <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm">
+                <div className="p-2 bg-emerald-500/20 rounded-xl"><CheckCircle size={18} className="text-emerald-400" /></div>
+                <span className="text-sm font-semibold">End-to-End Encryption</span>
+              </div>
+              <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm">
+                <div className="p-2 bg-purple-500/20 rounded-xl"><Calculator size={18} className="text-purple-400" /></div>
+                <span className="text-sm font-semibold">AI Cash Flow Forecasting</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
-            {error && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg flex items-start text-sm">
-                    <AlertCircle size={16} className="mr-2 mt-0.5 flex-shrink-0" />
-                    {error}
-                </div>
-            )}
+      {/* Right / Bottom Panel - Form */}
+      <div className={`flex flex-col justify-center flex-1 p-6 sm:p-12 md:p-20 bg-white dark:bg-gray-900 transition-all duration-500 overflow-y-auto`}>
+        <div className="max-w-2xl w-full mx-auto">
+          
+          <div className="mb-10 text-center md:text-left">
+            <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              {isRegister ? 'Create Account' : 'Sign In'}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {isRegister ? 'Fill in your business details to get started' : 'Enter your credentials to access your account'}
+            </p>
+          </div>
 
-            {successMsg && (
-                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg flex items-start text-sm">
-                    <CheckCircle size={16} className="mr-2 mt-0.5 flex-shrink-0" />
-                    {successMsg}
-                </div>
-            )}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-2xl flex items-start text-sm font-medium animate-in slide-in-from-top-2">
+              <AlertCircle size={18} className="mr-3 mt-0.5 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-start text-sm font-medium animate-in slide-in-from-top-2">
+              <CheckCircle size={18} className="mr-3 mt-0.5 flex-shrink-0" />
+              {successMsg}
+            </div>
+          )}
 
           {isRegister ? (
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
-                
-                {/* Business Info Section */}
-                <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-3 flex items-center">
-                        Basic Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Business Name *</label>
-                            <input required type="text" value={businessName} onChange={e => setBusinessName(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                        </div>
-                        <div>
-                             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Business Type *</label>
-                            <select value={businessType} onChange={e => setBusinessType(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none">
-                                <option>Sole Proprietor</option>
-                                <option>Partnership</option>
-                                <option>Pvt Ltd</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">PAN/VAT (9 Digits) *</label>
-                            <input required type="text" maxLength={9} value={pan} onChange={e => setPan(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                        </div>
-                         <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone *</label>
-                            <input required type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Tax & Financials */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
-                    <h3 className="text-sm font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide mb-3 flex items-center">
-                        <Calculator size={16} className="mr-1" /> Tax & Turnover
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Registration Type *</label>
-                            <select 
-                                value={taxSystem} 
-                                onChange={e => setTaxSystem(e.target.value as 'PAN' | 'VAT')} 
-                                className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none"
-                            >
-                                <option value="PAN">PAN Only (Non-VAT)</option>
-                                <option value="VAT">VAT Registered (13%)</option>
-                            </select>
-                            <p className="text-[10px] text-gray-500 mt-1">
-                                {taxSystem === 'PAN' ? "Select if turnover is < 50L (Goods) / 30L (Services)." : "Select if you are registered for VAT."}
-                            </p>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Est. Annual Turnover (NPR)</label>
-                            <input 
-                                type="number" 
-                                value={annualTurnover} 
-                                onChange={e => setAnnualTurnover(e.target.value)} 
-                                placeholder="e.g. 4500000"
-                                className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" 
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Detailed Address Section */}
-                <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-3 flex items-center">
-                        <MapPin size={16} className="mr-1" /> Business Address
-                    </h3>
-                    <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 1 (Street/Tole/Ward) *</label>
-                          <input required placeholder="e.g. New Road, Ward No. 22" type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                        </div>
-                         <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 2 (Optional)</label>
-                          <input placeholder="e.g. Near Bishal Bazar" type="text" value={addressLine2} onChange={e => setAddressLine2(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                             <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">City / Municipality *</label>
-                                <input required placeholder="e.g. Kathmandu" type="text" value={city} onChange={e => setCity(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Province *</label>
-                                <select required value={province} onChange={e => setProvince(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none">
-                                    <option value="">Select Province</option>
-                                    <option value="Koshi">Koshi</option>
-                                    <option value="Madhesh">Madhesh</option>
-                                    <option value="Bagmati">Bagmati</option>
-                                    <option value="Gandaki">Gandaki</option>
-                                    <option value="Lumbini">Lumbini</option>
-                                    <option value="Karnali">Karnali</option>
-                                    <option value="Sudurpaschim">Sudurpaschim</option>
-                                </select>
-                            </div>
-                        </div>
-                         <div className="grid grid-cols-2 gap-4">
-                             <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Country *</label>
-                                <input required type="text" value={country} onChange={e => setCountry(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Zip / Postal Code *</label>
-                                <input required placeholder="e.g. 44600" type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Owner Info & Security */}
-                <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-3">Owner & Security</h3>
-                    <div className="space-y-4">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Full Name *</label>
-                          <input required type="text" value={ownerName} onChange={e => setOwnerName(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address *</label>
-                          <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Password *</label>
-                          <div className="relative">
-                            <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none" />
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                          </div>
-                        </div>
-
-                         {/* Functional Upload Input */}
-                        <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer relative transition-colors mt-2 ${panPhoto ? 'border-green-400 bg-green-50 dark:bg-green-900/30' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-700'}`}>
-                            <input 
-                                type="file" 
-                                accept="image/*,application/pdf"
-                                onChange={handleFileChange}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                            {panPhoto ? (
-                                <div className="flex flex-col items-center text-green-700 dark:text-green-400">
-                                     <CheckCircle size={32} className="mb-2"/>
-                                     <p className="text-sm font-medium">Document Selected</p>
-                                     <p className="text-xs mt-1">Click to replace</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <UploadCloud className="mx-auto h-8 w-8 text-gray-400" />
-                                    <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mt-1">Upload PAN/VAT Certificate *</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">JPG, PNG or PDF (Max 5MB)</p>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-              </div>
+            <form onSubmit={handleRegister} className="space-y-8 animate-in fade-in duration-500">
               
-              <button disabled={loading} type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50 transition">
-                {loading ? 'Processing...' : 'Complete Registration'}
-              </button>
+              {/* Section 1: Business Details */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">1</div>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-lg">Business Structure</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Business Name *</label>
+                    <input required type="text" value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="e.g. Mero Tech Pvt Ltd" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Business Type *</label>
+                    <div className="relative">
+                      <select value={businessType} onChange={e => setBusinessType(e.target.value)} className={`${inputClass} appearance-none pr-10`}>
+                        <option>Sole Proprietor</option>
+                        <option>Partnership</option>
+                        <option>Pvt Ltd</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Taxation & Identity */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">2</div>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-lg">Tax & Registration</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Tax System *</label>
+                    <select value={taxSystem} onChange={e => setTaxSystem(e.target.value as 'PAN' | 'VAT')} className={`${inputClass} appearance-none`}>
+                      <option value="PAN">PAN Only (Non-VAT)</option>
+                      <option value="VAT">VAT Registered (13%)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>PAN/VAT Number *</label>
+                    <input required type="text" maxLength={9} value={pan} onChange={e => setPan(e.target.value)} placeholder="9-digit PAN" className={inputClass} />
+                  </div>
+                  <div className="md:col-span-2 relative group mt-2">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 ml-1 cursor-pointer">Registration Certificate *</label>
+                    <div className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 ${
+                      panPhoto 
+                      ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20' 
+                      : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 bg-gray-50 dark:bg-gray-800/50'
+                    }`}>
+                      <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                      {panPhoto ? (
+                        <div className="flex flex-col items-center text-emerald-600 dark:text-emerald-400">
+                           <CheckCircle size={28} className="mb-2"/>
+                           <p className="text-sm font-bold">Document Selected</p>
+                           <p className="text-xs font-medium mt-1 opacity-80">Click or drag to replace</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                           <div className="p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-3 group-hover:scale-110 transition-transform"><UploadCloud size={24} className="text-blue-500" /></div>
+                           <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Upload PAN/VAT Certificate</p>
+                           <p className="text-xs text-gray-400 mt-1">JPEG, PNG or PDF up to 5MB</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 mt-2">
+                    <label className={labelClass}>Est. Annual Turnover (NPR)</label>
+                    <input type="number" value={annualTurnover} onChange={e => setAnnualTurnover(e.target.value)} placeholder="e.g. 5000000" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: User Details (Moved down for better flow) */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">3</div>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-lg">Contact & Security</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Owner Name *</label>
+                    <input required type="text" value={ownerName} onChange={e => setOwnerName(e.target.value)} className={inputClass} placeholder="Full legal name" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Contact Number *</label>
+                    <input required type="tel" value={phone} onChange={e => setPhone(e.target.value)} className={inputClass} placeholder="10-digit mobile" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Email Address *</label>
+                    <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass} placeholder="business@email.com" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Secure Password *</label>
+                    <div className="relative">
+                      <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className={inputClass} placeholder="••••••••" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-1 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Address */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">4</div>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-lg">Location</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className={labelClass}>Address Line 1 *</label>
+                    <input required type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className={inputClass} placeholder="Street, Tole, Ward No." />
+                  </div>
+                  <div>
+                    <label className={labelClass}>City/VDC *</label>
+                    <input required type="text" value={city} onChange={e => setCity(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Province *</label>
+                    <select required value={province} onChange={e => setProvince(e.target.value)} className={`${inputClass} appearance-none`}>
+                      <option value="">Select Province</option>
+                      <option value="Koshi">Koshi</option><option value="Madhesh">Madhesh</option>
+                      <option value="Bagmati">Bagmati</option><option value="Gandaki">Gandaki</option>
+                      <option value="Lumbini">Lumbini</option><option value="Karnali">Karnali</option>
+                      <option value="Sudurpaschim">Sudurpaschim</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button disabled={loading} type="submit" className="w-full flex justify-center items-center py-4 px-4 rounded-2xl shadow-xl shadow-blue-600/20 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all active:scale-[0.98]">
+                  {loading ? <Loader2 className="animate-spin mr-2" size={20} /> : null}
+                  {loading ? 'Processing Registration...' : 'Complete Registration'}
+                </button>
+              </div>
+
+              <div className="text-center mt-8">
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                  Already have an account?{' '}
+                  <button type="button" onClick={() => { setIsRegister(false); setError(null); }} className="text-blue-600 dark:text-blue-400 font-bold hover:underline transition-all">Sign In</button>
+                </p>
+              </div>
             </form>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-5">
-               <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email or Phone</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail size={16} className="text-gray-400" />
+            
+            <form onSubmit={handleLogin} className="space-y-6 max-w-sm mx-auto md:mx-0 animate-in fade-in duration-500">
+              <div className="space-y-4">
+                <div>
+                  <label className={labelClass}>Email or Phone</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-1 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <User size={18} />
                     </div>
-                    <input required type="text" value={phone} onChange={e => setPhone(e.target.value)} className="block w-full pl-10 sm:text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md py-2 border focus:ring-blue-500 focus:border-blue-500" placeholder="Email or Phone" />
+                    <input required type="text" value={phone} onChange={e => setPhone(e.target.value)} className={`${inputClass} pl-11`} placeholder="you@business.com" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <CheckCircle size={16} className="text-gray-400" />
+                  <div className="flex justify-between items-end mb-1.5 ml-1">
+                    <label className={`${labelClass} mb-0 ml-0`}>Password</label>
+                    <a href="#" tabIndex={-1} className="text-[10px] font-bold text-blue-600 hover:text-blue-500 dark:text-blue-400 transition-colors">Forgot Password?</a>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-1 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <Key size={18} />
                     </div>
-                    <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="block w-full pl-10 sm:text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md py-2 border focus:ring-blue-500 focus:border-blue-500" placeholder="••••••••" />
-                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className={`${inputClass} pl-11`} placeholder="••••••••" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-1 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  <div className="flex justify-between mt-2">
-                     <a href="#" className="text-xs text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">Forgot Password?</a>
-                     <a href="#" className="text-xs text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 flex items-center"><Smartphone size={12} className="mr-1"/> Login with OTP (Disabled)</a>
+                </div>
+              </div>
+
+              <button disabled={loading} type="submit" className="w-full flex justify-center items-center group py-3.5 px-4 rounded-xl shadow-lg shadow-blue-600/20 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-600/30 focus:outline-none transition-all active:scale-[0.98]">
+                {loading ? <Loader2 className="animate-spin" size={18} /> : 'Sign In'}
+                {!loading && <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
+              </button>
+
+              {showBiometric && (
+                <div className="mt-8">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-4 bg-white dark:bg-gray-900 text-gray-500 font-medium">Or continue with</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <button onClick={handleBiometricLogin} type="button" className="w-full inline-flex justify-center items-center py-3.5 px-4 border-2 border-gray-100 dark:border-gray-800 rounded-xl shadow-sm bg-white dark:bg-gray-900 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 transition-all active:scale-[0.98]">
+                      {loading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Fingerprint size={20} className="mr-2 text-indigo-500" />}
+                      Biometric Login
+                    </button>
                   </div>
                 </div>
+              )}
 
-                <button disabled={loading} type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50">
-                  {loading ? 'Logging In...' : 'Sign In'}
-                </button>
-
-                {showBiometric && (
-                  <>
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-                      </div>
-                      <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 grid grid-cols-1 gap-3">
-                        <button onClick={handleBiometricLogin} type="button" className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                            {loading ? <div className="h-5 w-5 border-2 border-gray-300 border-t-purple-600 rounded-full animate-spin mr-2"/> : <Fingerprint size={20} className="mr-2 text-purple-600 dark:text-purple-400" />}
-                            Biometric Login
-                        </button>
-                    </div>
-                  </>
-                )}
+              <div className="text-center mt-12 pt-6 border-t border-gray-100 dark:border-gray-800">
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                  Don't have an account?{' '}
+                  <button type="button" onClick={() => { setIsRegister(true); setError(null); }} className="text-blue-600 dark:text-blue-400 font-bold hover:underline transition-all">Register Business</button>
+                </p>
+              </div>
             </form>
           )}
 
-          <div className="mt-6 text-center">
-             <button onClick={() => { setIsRegister(!isRegister); setError(null); }} className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
-                {isRegister ? "Already have an account? Sign In" : "Don't have an account? Register Business"}
-             </button>
-          </div>
         </div>
       </div>
     </div>

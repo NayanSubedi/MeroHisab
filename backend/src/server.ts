@@ -3,40 +3,44 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-// FIX: Use const objects instead of enums
-export const BusinessType = {
-  SOLE_PROPRIETOR: 'SOLE_PROPRIETOR',
-  PARTNERSHIP: 'PARTNERSHIP',
-  PVT_LTD: 'PVT_LTD'
-};
+dotenv.config();
 
-export const UserRole = {
-  ADMIN: 'ADMIN',
-  OWNER: 'OWNER',
-  ACCOUNTANT: 'ACCOUNTANT',
-  STAFF: 'STAFF'
-};
-
-const prisma = new PrismaClient();
+// Import Models & Enums
+import Business, { BusinessType } from './models/Business';
+import User, { UserRole } from './models/User';
+import Transaction from './models/Transaction';
+// ==========================================
+// 1. CONFIGURATION & CONSTANTS
+// ==========================================
 const app = express();
-// Cloud providers set the PORT env variable. Default to 5000 locally.
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
 const ADMIN_IDENTIFIER = process.env.ADMIN_IDENTIFIER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const DATABASE_URL = process.env.DATABASE_URL || 'mongodb://127.0.0.1:27017/dainikhisab?directConnection=true';
 
+// ==========================================
+// 2. MONGOOSE CONNECTION
+// ==========================================
+mongoose.connect(DATABASE_URL)
+  .then(() => console.log('✅ Connected to MongoDB via Mongoose'))
+  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+
+// ==========================================
+// 3. MIDDLEWARE
+// ==========================================
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// --- Middleware ---
-const authenticate = (req: any, res: any, next: any) => {
+const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -45,20 +49,20 @@ const authenticate = (req: any, res: any, next: any) => {
   }
 };
 
-const requireAdmin = async (req: any, res: any, next: any) => {
+const requireAdmin = async (req, res, next) => {
   if (req.user?.role !== 'ADMIN') return res.status(403).json({ message: 'Admin access required' });
   next();
 };
 
-// --- Routes ---
-
-// Health Check Root Route
+// ==========================================
+// 4. ROUTES
+// ==========================================
 app.get('/', (req, res) => {
-    res.send("MeroHisab Backend is Running. API endpoints are at /api/...");
+    res.send("Dainikhisab Backend is Running. API endpoints are at /api/...");
 });
 
-// 1. Auth Routes
-app.post('/api/auth/register', async (req: any, res: any) => {
+// --- Auth Routes ---
+app.post('/api/auth/register', async (req, res) => {
   const { 
     businessName, pan, ownerName, phone, email, type, password, panPhoto,
     addressLine1, addressLine2, city, province, country, zipCode,
@@ -66,10 +70,10 @@ app.post('/api/auth/register', async (req: any, res: any) => {
   } = req.body;
 
   try {
-    const existingBusiness = await prisma.business.findUnique({ where: { pan } });
+    const existingBusiness = await Business.findOne({ pan });
     if (existingBusiness) return res.status(400).json({ message: 'Business with this PAN already exists' });
 
-    const existingUser = await prisma.user.findFirst({ where: { OR: [{ email }, { phone }] } });
+    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
     if (existingUser) return res.status(400).json({ message: 'User email or phone already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -79,76 +83,61 @@ app.post('/api/auth/register', async (req: any, res: any) => {
     if (type === 'Pvt Ltd') businessType = BusinessType.PVT_LTD;
     if (type === 'Partnership') businessType = BusinessType.PARTNERSHIP;
 
-    await prisma.$transaction(async (tx: any) => {
-      const business = await tx.business.create({
-        data: {
-          name: businessName, pan, address: formattedAddress,
-          addressLine1, addressLine2, city, province, country, zipCode,
-          ownerName, phone, email,
-          type: businessType,
-          isVerified: false, // Manual verification required
-          panPhoto: panPhoto || null,
-          // New tax fields
-          taxSystem: taxSystem || 'PAN',
-          annualTurnover: annualTurnover || 0,
-          // App Settings
-          enableBiometricLogin: enableBiometricLogin || false
-        }
+    try {
+      const newBusiness = await Business.create({
+        name: businessName, pan, address: formattedAddress,
+        addressLine1, addressLine2, city, province, country, zipCode,
+        ownerName, phone, email, type: businessType,
+        isVerified: false, panPhoto: panPhoto || null,
+        taxSystem: taxSystem || 'PAN', annualTurnover: annualTurnover || 0,
+        enableBiometricLogin: enableBiometricLogin || false
       });
 
-      await tx.user.create({
-        data: {
-          name: ownerName, email, phone, password: hashedPassword,
-          role: UserRole.OWNER, 
-          businessId: business.id
-        }
+      await User.create({
+        name: ownerName, email, phone, password: hashedPassword,
+        role: UserRole.OWNER, businessId: newBusiness._id
       });
-    });
 
-    res.status(201).json({ message: 'Registration successful. Account pending verification.' });
+      res.status(201).json({ message: 'Registration successful. Account pending verification.' });
+    } catch (txErr) {
+      throw txErr;
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
-app.post('/api/auth/login', async (req: any, res: any) => {
+app.post('/api/auth/login', async (req, res) => {
   const { identifier, password } = req.body;
 
-  // Super Admin Check
   if (identifier === ADMIN_IDENTIFIER && password === ADMIN_PASSWORD) {
      const token = jwt.sign({ id: 'admin-id', role: 'ADMIN', name: 'Super Admin' }, JWT_SECRET, { expiresIn: '12h' });
-     return res.json({ 
-       token, 
-       user: { name: 'Super Admin', role: 'ADMIN', email: 'admin@merohisab.com' },
-       business: null
-     });
+     return res.json({ token, user: { name: 'Super Admin', role: 'ADMIN', email: 'admin@dainikhisab.com' }, business: null });
   }
 
   try {
-    const user = await prisma.user.findFirst({
-        where: { OR: [{ email: identifier }, { phone: identifier }] }
-    });
-
+    const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] }).lean();
     if (!user) return res.status(400).json({ message: 'User not found' });
 
     let business = null;
     if (user.businessId) {
-        business = await prisma.business.findUnique({ where: { id: user.businessId } });
+        business = await Business.findById(user.businessId).lean();
     }
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) return res.status(400).json({ message: 'Invalid credentials' });
 
     if (user.role === 'OWNER' && business && !business.isVerified) {
-        return res.status(403).json({ 
-            message: 'Your business is pending verification.',
-            code: 'PENDING_VERIFICATION'
-        });
+        return res.status(403).json({ message: 'Your business is pending verification.', code: 'PENDING_VERIFICATION' });
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role, businessId: user.businessId }, JWT_SECRET, { expiresIn: '12h' });
+    const token = jwt.sign({ id: user._id, role: user.role, businessId: user.businessId }, JWT_SECRET, { expiresIn: '12h' });
     const { password: _, ...safeUser } = user;
+    safeUser.id = user._id; // Front-end compatibility
+
+    if (business) business.id = business._id;
+
     res.json({ token, user: safeUser, business });
   } catch (error) {
     console.error("Login Error:", error);
@@ -156,326 +145,230 @@ app.post('/api/auth/login', async (req: any, res: any) => {
   }
 });
 
-// 2. User Profile Routes
-app.put('/api/user/profile', authenticate, async (req: any, res: any) => {
+// --- User Profile Routes ---
+app.put('/api/user/profile', authenticate, async (req, res) => {
   const { 
-      name, email, newPassword, 
-      businessName, addressLine1, addressLine2, city, province, country, zipCode, logo,
-      taxSystem, annualTurnover, enableBiometricLogin
+      name, email, newPassword, businessName, addressLine1, addressLine2, 
+      city, province, country, zipCode, logo, taxSystem, annualTurnover, enableBiometricLogin
   } = req.body;
 
   try {
-      const userId = req.user.id;
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await User.findById(req.user.id);
       if (!user) return res.status(401).json({ message: 'Session expired.' });
 
-      const updateData: any = { name, email };
+      const updateData = { name, email };
       if (newPassword && newPassword.trim() !== '') {
           updateData.password = await bcrypt.hash(newPassword, 10);
       }
-      const updatedUser = await prisma.user.update({
-          where: { id: userId },
-          data: updateData
-      });
+      
+      const updatedUser = await User.findByIdAndUpdate(req.user.id, updateData, { new: true }).lean();
 
       let updatedBusiness = null;
       if (user.role === 'OWNER' && user.businessId) {
           const formattedAddress = `${addressLine1}, ${city}, ${province}`;
-          updatedBusiness = await prisma.business.update({
-              where: { id: user.businessId },
-              data: {
-                  name: businessName, address: formattedAddress,
-                  addressLine1, addressLine2, city, province, country, zipCode,
-                  logo,
-                  taxSystem, annualTurnover,
-                  enableBiometricLogin
-              }
-          });
+          updatedBusiness = await Business.findByIdAndUpdate(
+              user.businessId,
+              {
+                  name: businessName, address: formattedAddress, addressLine1, addressLine2, 
+                  city, province, country, zipCode, logo, taxSystem, annualTurnover, enableBiometricLogin
+              },
+              { new: true }
+          ).lean();
       }
+      
       const { password: _, ...safeUser } = updatedUser;
+      safeUser.id = safeUser._id;
       res.json({ message: 'Profile updated', user: safeUser, business: updatedBusiness });
   } catch (error) {
       res.status(500).json({ message: 'Failed to update profile' });
   }
 });
 
-// 3. Transaction Routes
-app.get('/api/transactions', authenticate, async (req: any, res: any) => {
+// --- Transaction Routes ---
+app.get('/api/transactions', authenticate, async (req, res) => {
     try {
         if (!req.user.businessId) return res.json([]);
-        const transactions = await prisma.transaction.findMany({ 
-            where: { businessId: req.user.businessId }, 
-            orderBy: { date: 'desc' } 
-        });
-        res.json(transactions);
+        const transactions = await Transaction.find({ businessId: req.user.businessId }).sort({ date: -1 });
+        
+        // Map _id to id for frontend
+        const formatted = transactions.map(t => ({...t.toObject(), id: t._id}));
+        res.json(formatted);
     } catch (error) { res.status(500).json({ message: 'Error fetching transactions' }); }
 });
 
-app.post('/api/transactions', authenticate, async (req: any, res: any) => {
+app.post('/api/transactions', authenticate, async (req, res) => {
     try {
         const { id, date, amount, vatAmount, ...rest } = req.body;
 
         if (!req.user.businessId) return res.status(400).json({ message: 'No business linked to user' });
         
         const numericAmount = parseFloat(amount);
-        if (isNaN(numericAmount)) {
-            return res.status(400).json({ message: 'Valid amount is required' });
-        }
+        if (isNaN(numericAmount)) return res.status(400).json({ message: 'Valid amount is required' });
 
-        const numericVat = vatAmount ? parseFloat(vatAmount) : 0;
-
-        const transaction = await prisma.transaction.create({ 
-            data: { 
-                ...rest,
-                amount: numericAmount,
-                vatAmount: numericVat,
-                date: new Date(date), 
-                businessId: req.user.businessId 
-            } 
+        const transaction = await Transaction.create({ 
+            ...rest, amount: numericAmount, vatAmount: vatAmount ? parseFloat(vatAmount) : 0,
+            date: new Date(date), businessId: req.user.businessId 
         });
-        res.json(transaction);
-    } catch (error: any) { 
-        console.error("Transaction Error:", error.message);
-        res.status(500).json({ message: 'Error saving transaction: ' + error.message }); 
-    }
+
+        res.json({ ...transaction.toObject(), id: transaction._id });
+    } catch (error) { res.status(500).json({ message: 'Error saving transaction: ' + error.message }); }
 });
 
-app.put('/api/transactions/:id', authenticate, async (req: any, res: any) => {
+app.put('/api/transactions/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
         const { date, amount, ...updateData } = req.body;
 
-        const updated = await prisma.transaction.update({
-            where: { id: id, businessId: req.user.businessId },
-            data: {
-                ...updateData,
-                amount: parseFloat(amount),
-                date: new Date(date)
-            }
-        });
-        res.json(updated);
-    } catch (error) {
-        res.status(500).json({ message: 'Error updating transaction' });
-    }
+        const updated = await Transaction.findOneAndUpdate(
+            { _id: id, businessId: req.user.businessId },
+            { ...updateData, amount: parseFloat(amount), date: new Date(date) },
+            { new: true }
+        );
+        res.json({ ...updated.toObject(), id: updated._id });
+    } catch (error) { res.status(500).json({ message: 'Error updating transaction' }); }
 });
 
-app.delete('/api/transactions/:id', authenticate, async (req: any, res: any) => {
+app.delete('/api/transactions/:id', authenticate, async (req, res) => {
     try {
-        if (!req.user.businessId) return res.status(403).json({ message: 'Unauthorized' });
-
-        const transaction = await prisma.transaction.findFirst({
-            where: { id: req.params.id, businessId: req.user.businessId }
-        });
-
-        if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
-
-        await prisma.transaction.delete({ where: { id: req.params.id } });
+        const tx = await Transaction.findOneAndDelete({ _id: req.params.id, businessId: req.user.businessId });
+        if (!tx) return res.status(404).json({ message: 'Transaction not found' });
         res.json({ message: 'Transaction deleted successfully' });
-    } catch (error) {
-        console.error("Delete Error", error);
-        res.status(500).json({ message: 'Error deleting transaction' });
-    }
+    } catch (error) { res.status(500).json({ message: 'Error deleting transaction' }); }
 });
 
-// 4. Staff/User Management Routes (Owner Only)
-app.get('/api/users', authenticate, async (req: any, res: any) => {
+// --- Staff/User Management ---
+app.get('/api/users', authenticate, async (req, res) => {
     try {
-        const users = await prisma.user.findMany({ where: { businessId: req.user.businessId } });
-        const safeUsers = users.map((u: any) => { const { password, ...rest } = u; return rest; });
+        const users = await User.find({ businessId: req.user.businessId }).lean();
+        const safeUsers = users.map(u => { const { password, ...rest } = u; return { ...rest, id: u._id }; });
         res.json(safeUsers);
     } catch (error) { res.status(500).json({ message: 'Error fetching staff' }); }
 });
 
-app.post('/api/users', authenticate, async (req: any, res: any) => {
+app.post('/api/users', authenticate, async (req, res) => {
     try {
         if (req.user.role !== 'OWNER') return res.status(403).json({ message: 'Restricted' });
         const { name, email, phone, role, password } = req.body;
         
-        const existing = await prisma.user.findFirst({ where: { OR: [{ email }, { phone }] } });
+        const existing = await User.findOne({ $or: [{ email }, { phone }] });
         if (existing) return res.status(400).json({ message: 'User exists' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        const newUser = await prisma.user.create({ 
-            data: { 
-                name, email, phone, password: hashedPassword, role, 
-                businessId: req.user.businessId, status: 'Active'
-            } 
+        const newUser = await User.create({ 
+            name, email, phone, password: hashedPassword, role, 
+            businessId: req.user.businessId, status: 'Active'
         });
-        const { password: _, ...safeUser } = newUser;
+
+        const { password: _, ...safeUser } = newUser.toObject();
+        safeUser.id = safeUser._id;
         res.json(safeUser);
     } catch (error) { res.status(500).json({ message: 'Error creating user' }); }
 });
 
-app.delete('/api/users/:id', authenticate, async (req: any, res: any) => {
+app.delete('/api/users/:id', authenticate, async (req, res) => {
     try {
         if (req.user.role !== 'OWNER') return res.status(403).json({ message: 'Restricted' });
         if (req.user.id === req.params.id) return res.status(400).json({ message: 'Cannot delete self' });
-        await prisma.user.delete({ where: { id: req.params.id } });
+        
+        await User.findByIdAndDelete(req.params.id);
         res.json({ message: 'User deleted' });
     } catch (error) { res.status(500).json({ message: 'Error deleting user' }); }
 });
 
-// 5. Admin Routes (Restricted)
-app.get('/api/admin/businesses', authenticate, requireAdmin, async (req: any, res: any) => {
+// --- Admin Routes ---
+app.get('/api/admin/businesses', authenticate, requireAdmin, async (req, res) => {
     try {
-        const businesses = await prisma.business.findMany({ orderBy: { createdAt: 'desc' } });
-        res.json(businesses);
+        const businesses = await Business.find().sort({ createdAt: -1 }).lean();
+        res.json(businesses.map(b => ({ ...b, id: b._id })));
     } catch (error) { res.status(500).json({ message: 'Error fetching businesses' }); }
 });
 
-app.get('/api/admin/users', authenticate, requireAdmin, async (req: any, res: any) => {
+app.get('/api/admin/users', authenticate, requireAdmin, async (req, res) => {
     try {
-        // FILTER: Only return admins, exclude business owners/staff
-        const users = await prisma.user.findMany({
-            where: { role: 'ADMIN' },
-            include: { business: true },
-            orderBy: { createdAt: 'desc' }
-        });
-        const safeUsers = users.map((u: any) => {
-            const { password, ...rest } = u;
-            return rest;
+        const users = await User.find({ role: 'ADMIN' }).populate('businessId').sort({ createdAt: -1 }).lean();
+        const safeUsers = users.map(u => { 
+            const { password, ...rest } = u; 
+            return { ...rest, business: u.businessId, id: u._id }; 
         });
         res.json(safeUsers);
     } catch (error) { res.status(500).json({ message: 'Error fetching users' }); }
 });
 
-app.post('/api/admin/create-admin', authenticate, requireAdmin, async (req: any, res: any) => {
+app.post('/api/admin/create-admin', authenticate, requireAdmin, async (req, res) => {
     const { name, email, phone, password } = req.body;
     try {
-        const existing = await prisma.user.findFirst({ where: { OR: [{ email }, { phone }] } });
+        const existing = await User.findOne({ $or: [{ email }, { phone }] });
         if (existing) return res.status(400).json({ message: 'User already exists' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newAdmin = await prisma.user.create({
-            data: {
-                name, email, phone, password: hashedPassword,
-                role: UserRole.ADMIN,
-                status: 'Active'
-            }
+        const newAdmin = await User.create({
+            name, email, phone, password: hashedPassword, role: UserRole.ADMIN, status: 'Active'
         });
-        const { password: _, ...safeUser } = newAdmin;
+
+        const { password: _, ...safeUser } = newAdmin.toObject();
+        safeUser.id = safeUser._id;
         res.json(safeUser);
-    } catch (error) {
-        console.error("Create Admin Error:", error);
-        res.status(500).json({ message: 'Error creating admin' });
-    }
+    } catch (error) { res.status(500).json({ message: 'Error creating admin' }); }
 });
 
-// --- NEW ADDED ROUTES START (Fixing Missing Endpoints) ---
-
-// Route to DELETE a system admin/user
-app.delete('/api/admin/users/:id', authenticate, requireAdmin, async (req: any, res: any) => {
+app.delete('/api/admin/users/:id', authenticate, requireAdmin, async (req, res) => {
     try {
-        const userId = req.params.id;
+        if (req.user.id === req.params.id) return res.status(400).json({ message: 'You cannot delete your own account.' });
 
-        // Prevent admin from deleting themselves
-        if (req.user.id === userId) {
-            return res.status(400).json({ message: 'You cannot delete your own account.' });
-        }
-
-        // Check if user exists
-        const user = await prisma.user.findUnique({ where: { id: userId } });
+        const user = await User.findByIdAndDelete(req.params.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Delete the user
-        await prisma.user.delete({ where: { id: userId } });
-
         res.json({ message: 'User deleted successfully' });
-    } catch (error) {
-        console.error("Delete Admin Error:", error);
-        res.status(500).json({ message: 'Error deleting user. They may be linked to active business records.' });
-    }
+    } catch (error) { res.status(500).json({ message: 'Error deleting user.' }); }
 });
 
-// Route to UPDATE a system admin's password
-app.patch('/api/admin/users/:id/password', authenticate, requireAdmin, async (req: any, res: any) => {
+app.patch('/api/admin/users/:id/password', authenticate, requireAdmin, async (req, res) => {
     try {
-        const userId = req.params.id;
         const { password } = req.body;
-
-        if (!password || password.length < 6) {
-            return res.status(400).json({ message: 'Password must be at least 6 characters' });
-        }
+        if (!password || password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        await prisma.user.update({
-            where: { id: userId },
-            data: { password: hashedPassword }
-        });
+        await User.findByIdAndUpdate(req.params.id, { password: hashedPassword });
 
         res.json({ message: 'Password updated successfully' });
-    } catch (error) {
-        console.error("Update Password Error:", error);
-        res.status(500).json({ message: 'Error updating password' });
-    }
+    } catch (error) { res.status(500).json({ message: 'Error updating password' }); }
 });
-// --- NEW ADDED ROUTES END ---
 
-app.get('/api/admin/business/:id/users', authenticate, requireAdmin, async (req: any, res: any) => {
+app.get('/api/admin/business/:id/users', authenticate, requireAdmin, async (req, res) => {
     try {
-        const users = await prisma.user.findMany({
-            where: { businessId: req.params.id },
-            orderBy: { createdAt: 'desc' }
-        });
-        const safeUsers = users.map((u: any) => {
-            const { password, ...rest } = u;
-            return rest;
-        });
+        const users = await User.find({ businessId: req.params.id }).sort({ createdAt: -1 }).lean();
+        const safeUsers = users.map(u => { const { password, ...rest } = u; return { ...rest, id: u._id }; });
         res.json(safeUsers);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching business users' });
-    }
+    } catch (error) { res.status(500).json({ message: 'Error fetching business users' }); }
 });
 
-app.patch('/api/admin/verify/:id', authenticate, requireAdmin, async (req: any, res: any) => {
+app.patch('/api/admin/verify/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         const { isVerified, rejectionReason } = req.body;
-        
-        const updateData: any = { 
-            isVerified: isVerified 
-        };
+        const updateData = { isVerified };
 
-        // Logic: 
-        // If Verifying (true): Clear any previous rejection reason.
-        // If Rejecting (false): Save the rejection reason if provided.
-        if (isVerified) {
-            updateData.rejectionReason = null; 
-        } else if (rejectionReason) {
-            updateData.rejectionReason = rejectionReason;
-        }
+        if (isVerified) updateData.rejectionReason = null; 
+        else if (rejectionReason) updateData.rejectionReason = rejectionReason;
 
-        const updated = await prisma.business.update({ 
-            where: { id: req.params.id }, 
-            data: updateData 
-        });
-
-        // Optional: Send Email Notification Logic Here
-        // if (!isVerified && rejectionReason) { sendRejectionEmail(updated.email, rejectionReason); }
-
-        res.json(updated);
-    } catch (error) { 
-        console.error(error);
-        res.status(500).json({ message: 'Error updating status' }); 
-    }
+        const updated = await Business.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        res.json({ ...updated.toObject(), id: updated._id });
+    } catch (error) { res.status(500).json({ message: 'Error updating status' }); }
 });
 
-app.delete('/api/admin/business/:id', authenticate, requireAdmin, async (req: any, res: any) => {
+app.delete('/api/admin/business/:id', authenticate, requireAdmin, async (req, res) => {
     try {
-        await prisma.business.delete({ where: { id: req.params.id } });
+        // FindOneAndDelete triggers the middleware we set up to cascade delete users & transactions
+        await Business.findOneAndDelete({ _id: req.params.id });
         res.json({ message: 'Business removed' });
     } catch (error) { res.status(500).json({ message: 'Error removing business' }); }
 });
 
-// --- Catch-All 404 Handler ---
-// IMPORTANT: This must be the LAST route defined
+// Catch-All 404 Handler
 app.use((req, res) => {
-  console.log(`404: ${req.method} ${req.url}`);
   res.status(404).json({ message: `Route ${req.method} ${req.url} not found` });
 });
 
-
-app.listen(5000)
-
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

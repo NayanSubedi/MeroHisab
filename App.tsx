@@ -10,6 +10,7 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminUsers from './components/AdminUsers';
 import ProfileSettings from './components/ProfileSettings';
 import DailyTransactions from './components/DailyTransactions';
+// import PredictiveAnalysis from './components/PredictiveAnalysis';
 import { BusinessProfile, Transaction, UserRole, User } from './types';
 import { Loader2 } from 'lucide-react';
 import { api } from './services/api';
@@ -22,16 +23,16 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<BusinessProfile | null>(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [token, setToken] = useState<string>('');
-  
+
   // Transactions & Staff State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [staffList, setStaffList] = useState<User[]>([]);
 
   // --- LOGOUT LOGIC ---
- const handleLogout = useCallback(async () => {
+  const handleLogout = useCallback(async () => {
     console.log("Logging out & clearing session...");
     await Preferences.remove({ key: 'token' });
-    
+
     // ✅ FIX: Only clear userProfile if biometrics are NOT enabled.
     // If enabled, we must retain it to restore the app state during Biometric Login.
     try {
@@ -104,7 +105,7 @@ const App: React.FC = () => {
           setUserProfile(parsedProfile);
           setToken(storedToken);
           setIsAuthenticated(true);
-          
+
           if (parsedProfile.role === UserRole.ADMIN) {
             setCurrentView('admin_dashboard');
           } else if (parsedProfile.role === UserRole.STAFF) {
@@ -112,7 +113,7 @@ const App: React.FC = () => {
           } else {
             setCurrentView('dashboard');
           }
-          
+
           if (parsedProfile.role !== UserRole.ADMIN) {
             fetchTransactions(storedToken);
             if (parsedProfile.role === UserRole.OWNER) {
@@ -124,7 +125,7 @@ const App: React.FC = () => {
         console.error("Failed to restore session", e);
         handleLogout();
       } finally {
-        setIsCheckingSession(false); 
+        setIsCheckingSession(false);
       }
     };
 
@@ -136,7 +137,7 @@ const App: React.FC = () => {
     setUserProfile(profile);
     setToken(authToken);
     setIsAuthenticated(true);
-    
+
     if (profile.role === UserRole.ADMIN) {
       setCurrentView('admin_dashboard');
     } else {
@@ -166,6 +167,15 @@ const App: React.FC = () => {
       setTransactions(prev => prev.filter(t => t.id !== id));
     } catch (e: any) {
       alert("Failed to delete transaction: " + e.message);
+    }
+  };
+
+  const updateTransaction = async (data: any) => {
+    try {
+      const updated = await api.updateTransaction(data.id, data, token);
+      setTransactions(prev => prev.map(t => t.id === data.id ? { ...t, ...updated } : t));
+    } catch (e: any) {
+      alert("Failed to update transaction: " + e.message);
     }
   };
 
@@ -201,30 +211,32 @@ const App: React.FC = () => {
 
     switch (currentView) {
       case 'dashboard':
-        return userProfile.role === UserRole.STAFF 
-          ? <BillUpload onAddTransaction={addTransaction} onCancel={() => {}} transactions={transactions} />
+        return userProfile.role === UserRole.STAFF
+          ? <BillUpload onAddTransaction={addTransaction} onCancel={() => { }} transactions={transactions} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onReload={() => fetchTransactions(token)} />
           : <Dashboard transactions={transactions} onQuickAction={setCurrentView} onRefresh={handleManualRefresh} />;
       case 'upload':
-        return <BillUpload onAddTransaction={addTransaction} onCancel={() => setCurrentView(userProfile.role === UserRole.STAFF ? 'invoice' : 'dashboard')} transactions={transactions} />;
+        return <BillUpload onAddTransaction={addTransaction} onCancel={() => setCurrentView(userProfile.role === UserRole.STAFF ? 'invoice' : 'dashboard')} transactions={transactions} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onReload={() => fetchTransactions(token)} />;
       case 'invoice':
         return <InvoiceGenerator businessProfile={userProfile} onSaveInvoice={addTransaction} transactions={transactions} />;
       case 'daily':
         return <DailyTransactions transactions={transactions} />;
       case 'reports':
-        return userProfile.role === UserRole.STAFF 
+        return userProfile.role === UserRole.STAFF
           ? <InvoiceGenerator businessProfile={userProfile} onSaveInvoice={addTransaction} transactions={transactions} />
           : <Reports transactions={transactions} />;
+      // case 'predictions':
+      //   return <PredictiveAnalysis transactions={transactions} />;
       case 'users':
-        return userProfile.role !== UserRole.OWNER 
+        return userProfile.role !== UserRole.OWNER
           ? <Dashboard transactions={transactions} onQuickAction={setCurrentView} onRefresh={handleManualRefresh} />
           : <UserManagement staffList={staffList} onAddStaff={handleAddStaff} onRemoveStaff={handleRemoveStaff} />;
       case 'profile':
-        return userProfile.role !== UserRole.OWNER 
+        return userProfile.role !== UserRole.OWNER
           ? <Dashboard transactions={transactions} onQuickAction={setCurrentView} onRefresh={handleManualRefresh} />
           : <ProfileSettings userProfile={userProfile} token={token} onUpdate={handleProfileUpdate} />;
       default:
-        return userProfile.role === UserRole.STAFF 
-          ? <BillUpload onAddTransaction={addTransaction} onCancel={() => {}} transactions={transactions} />
+        return userProfile.role === UserRole.STAFF
+          ? <BillUpload onAddTransaction={addTransaction} onCancel={() => { }} transactions={transactions} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onReload={() => fetchTransactions(token)} />
           : <Dashboard transactions={transactions} onQuickAction={setCurrentView} onRefresh={handleManualRefresh} />;
     }
   };

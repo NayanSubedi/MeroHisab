@@ -4,7 +4,7 @@
 // IMPORTANT FOR RENDER DEPLOYMENT:
 // ---------------------------------------------------------------------------
 
-const PROD_URL = 'https://merohisab-euxk.onrender.com/api'; // Correct Render URL
+const PROD_URL = 'http://localhost:5000'; 
 
 // Fallback for local development
 const LOCAL_IP = '192.168.1.66'; // Your local computer IP
@@ -36,6 +36,10 @@ console.log("FINAL API URL:", API_URL);
 
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
+        if (response.status === 401) {
+            window.dispatchEvent(new Event('auth-expired'));
+        }
+        
         // Create an error object
         const error: any = new Error();
         // Attach the status code (Critical for detecting 401)

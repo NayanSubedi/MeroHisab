@@ -45,7 +45,7 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
     const superAdmin: SystemUser = {
         id: 'super-admin-sys',
         name: 'Super Admin',
-        email: 'admin@merohisab.com',
+        email: 'admin@dainikhisab.com',
         phone: 'N/A',
         role: UserRole.ADMIN,
         status: 'Active',

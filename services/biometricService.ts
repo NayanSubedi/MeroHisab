@@ -27,7 +27,7 @@ export const BiometricService = {
       if (!Capacitor.isNativePlatform()) return false;
 
       await NativeBiometric.verifyIdentity({
-        reason: 'Authenticate to access MeroHisab',
+        reason: 'Authenticate to access Dainikhisab',
         title: 'Biometric Login',
         subtitle: 'Confirm your identity',
         description: 'Use your fingerprint or face to log in',

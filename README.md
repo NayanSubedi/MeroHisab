@@ -1,7 +1,7 @@
-# MeroHisab - Nepal MSME Accounting App
+# Dainikhisab - Nepal MSME Accounting App
 
 ## Overview
-MeroHisab is a secure, mobile-friendly web application designed for Nepal-based MSMEs (Micro, Small, and Medium Enterprises). It facilitates business registration, billing, expense tracking, and financial reporting with a focus on local compliance (PAN/VAT).
+Dainikhisab is a secure, mobile-friendly web application designed for Nepal-based MSMEs (Micro, Small, and Medium Enterprises). It facilitates business registration, billing, expense tracking, and financial reporting with a focus on local compliance (PAN/VAT).
 
 ## Features
 - **Dashboard**: Real-time financial overview with charts and compliance alerts.
@@ -35,10 +35,10 @@ If you are setting this up locally, initialize a Vite project and copy the files
 
 ```bash
 # Create a new Vite project
-npm create vite@latest merohisab -- --template react-ts
+npm create vite@latest dainikhisab -- --template react-ts
 
 # Navigate to the directory
-cd merohisab
+cd dainikhisab
 
 # Install dependencies
 npm install lucide-react recharts
@@ -64,4 +64,4 @@ This application is configured to connect to your own custom AI/OCR backend mode
 2.  Update `CUSTOM_MODEL_API_URL` to point to your backend API (e.g., `http://localhost:8000/predict`).
 3.  Set `USE_MOCK_DATA = false`.
 4.  Ensure your backend accepts a JSON POST request with an `image` field (base64 extracted) and returns JSON matching the `ExtractedBillData` interface (or update the mapping logic in `services/aiService.ts`).
-"# MeroHisab" 
+"# Dainikhisab" 
