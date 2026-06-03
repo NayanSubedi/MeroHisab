@@ -13,6 +13,26 @@ const NGROK_BASE = "https://inefficient-lael-substructural.ngrok-free.dev";
 const CUSTOM_MODEL_API_URL = `${NGROK_BASE}/extract`;
 const CONVERT_DATE_URL = `${NGROK_BASE}/convert-date`;
 
+export const getConvertedDate = async (bsDate: string): Promise<string> => {
+  try {
+    const convertRes = await fetch(CONVERT_DATE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
+      body: JSON.stringify({ date_bs: bsDate })
+    });
+    if (convertRes.ok) {
+      const data = await convertRes.json();
+      return data.date_ad;
+    }
+  } catch (err) {
+    console.warn("Manual date conversion error:", err);
+  }
+  return bsDate;
+};
+
 // Helper: base64 → Blob (File)
 const base64ToBlob = (base64: string, contentType = 'image/jpeg'): Blob => {
   const byteCharacters = atob(base64);
@@ -88,16 +108,37 @@ export const analyzeBillImage = async (base64Image: string): Promise<ExtractedBi
         const yearMatch = extractedDate.match(/(\d{4})/);
         if (yearMatch) {
           const year = parseInt(yearMatch[1], 10);
-          // BS now ~2082. Use >= 2070 so European AD receipts (2020-2025) are NOT misconverted.
+          // Intercept any year >= 2070 and treat it as a Bikram Sambat (BS) date.
           if (year >= 2070) {
             console.log(`Detected BS Date: ${extractedDate}, attempting conversion...`);
+            
+            // Format BS date to YYYY-MM-DD before converting
+            let formattedBsDate = extractedDate;
+            const parts = extractedDate.match(/\d+/g);
+            if (parts && parts.length >= 3) {
+              const yIdx = parts.findIndex(p => p.length === 4);
+              if (yIdx !== -1) {
+                const y = parts[yIdx];
+                let m = '01';
+                let d = '01';
+                if (yIdx === 0) { // YYYY-MM-DD or YYYY/MM/DD
+                  m = parts[1].padStart(2, '0');
+                  d = parts[2].padStart(2, '0');
+                } else if (yIdx === 2) { // DD-MM-YYYY
+                  d = parts[0].padStart(2, '0');
+                  m = parts[1].padStart(2, '0');
+                }
+                formattedBsDate = `${y}-${m}-${d}`;
+              }
+            }
+
             const convertRes = await fetch(CONVERT_DATE_URL, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'ngrok-skip-browser-warning': 'true'
               },
-              body: JSON.stringify({ date_bs: extractedDate })
+              body: JSON.stringify({ date_bs: formattedBsDate })
             });
             if (convertRes.ok) {
               const convertData = await convertRes.json();

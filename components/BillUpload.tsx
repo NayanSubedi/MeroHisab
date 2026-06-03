@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Camera, Upload, Check, AlertTriangle, X, Loader2, History, FileText, Eye, Calendar, Image as ImageIcon, Trash2, Aperture, UploadCloud, Edit, CheckCircle, XCircle, Info, Search, Sparkles, ChevronRight, Shield, Tag, Building2, Hash, CreditCard, ArrowLeft } from 'lucide-react';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
-import { analyzeBillImage } from '../services/aiService';
+import { analyzeBillImage, getConvertedDate } from '../services/aiService';
 import { Transaction, TransactionType, ExpenseCategory } from '../types';
 
 // --- Premium CSS Keyframes ---
@@ -86,7 +86,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
     const historyData = transactions.filter(t => {
         if (t.type !== TransactionType.EXPENSE) return false;
         if (historyDate !== 'all') {
-            const tDate = t.date.split('T')[0];
+            const tDate = (t.createdAt || t.date).split('T')[0];
             if (tDate !== historyDate) return false;
         }
         if (searchQuery.trim()) {
@@ -119,6 +119,40 @@ const BillUpload: React.FC<BillUploadProps> = ({
     };
 
     // Action Handlers
+    const normalizeDateStr = (dateStr: string): string => {
+        if (!dateStr) return dateStr;
+        const parts = dateStr.match(/\d+/g);
+        if (parts && parts.length >= 3) {
+            const yIdx = parts.findIndex(p => p.length === 4);
+            if (yIdx !== -1) {
+                const y = parts[yIdx];
+                let m = '01', d = '01';
+                if (yIdx === 0) {
+                    m = parts[1].padStart(2, '0');
+                    d = parts[2].padStart(2, '0');
+                } else if (yIdx === 2) {
+                    d = parts[0].padStart(2, '0');
+                    m = parts[1].padStart(2, '0');
+                }
+                return `${y}-${m}-${d}`;
+            }
+        }
+        return dateStr;
+    };
+
+    const ensureAdDate = async (rawDate: string) => {
+        const norm = normalizeDateStr(rawDate);
+        if (!norm) return norm;
+        const yMatch = norm.match(/^(\d{4})/);
+        if (yMatch) {
+            const year = parseInt(yMatch[1], 10);
+            if (year >= 2070) {
+                return await getConvertedDate(norm);
+            }
+        }
+        return norm;
+    };
+
     const handleEditClick = (bill?: Transaction) => {
         const target = bill || selectedBill;
         if (!target) return;
@@ -130,8 +164,10 @@ const BillUpload: React.FC<BillUploadProps> = ({
     const handleSaveEdit = async () => {
         if (!selectedBill || !onUpdateTransaction) return;
 
+        const finalDate = await ensureAdDate(editForm.date);
+        const formattedEdit = { ...editForm, date: finalDate };
         try {
-            await onUpdateTransaction(editForm);
+            await onUpdateTransaction(formattedEdit);
             if (onReload) onReload();
             setSelectedBill(null);
             setIsEditing(false);
@@ -198,6 +234,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
     };
 
     const processImage = async (base64Data: string) => {
+        setStep(2);
         setIsAnalyzing(true);
         try {
             const result = await analyzeBillImage(base64Data);
@@ -221,7 +258,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         const numAmount = parseFloat(amount);
@@ -233,9 +270,12 @@ const BillUpload: React.FC<BillUploadProps> = ({
 
         const uploadTimestamp = new Date().toISOString();
 
+        const finalDate = await ensureAdDate(date);
+
         const newTransaction: Transaction = {
             id: Date.now().toString(),
-            date: uploadTimestamp,
+            date: finalDate,
+            createdAt: new Date().toISOString(),
             type: TransactionType.EXPENSE,
             category,
             amount: numAmount,
@@ -385,11 +425,33 @@ const BillUpload: React.FC<BillUploadProps> = ({
                     </div>
                 )}
 
+                {/* === STEP 1.5: AI ANALYZING LOAD SCREEN === */}
+                {step === 2 && isAnalyzing && imagePreview && (
+                    <div className="p-10 flex flex-col items-center justify-center min-h-[450px] bill-float-up text-center">
+                        <div className="relative w-56 h-56 mb-8 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(59,130,246,0.2)] border-2 border-blue-400/30 group bg-black">
+                            <img src={imagePreview} className="w-full h-full object-cover blur-[3px] opacity-60" alt="Scanning" />
+                            <div className="absolute inset-0 bg-blue-600/10 mix-blend-overlay"></div>
+                            <div className="absolute inset-x-0 h-1 bg-blue-500 bill-scan-line shadow-[0_0_20px_rgba(59,130,246,1)]"></div>
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                                <Loader2 size={48} className="animate-spin text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+                            </div>
+                        </div>
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight mb-2">Analyzing Receipt</h3>
+                        <p className="text-gray-500 dark:text-gray-400 max-w-sm text-sm">
+                            HisabAI is reading the vendor name, date, quantity, and amounts...
+                        </p>
+                        
+                        <div className="w-48 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full mt-8 overflow-hidden relative">
+                            <div className="absolute top-0 bottom-0 left-0 bg-blue-500 w-1/2 rounded-full animate-[pulse_1.5s_ease-in-out_infinite] shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+                        </div>
+                    </div>
+                )}
+
                 {/* === STEP 2: REVIEW & EDIT === */}
-                {step === 2 && imagePreview && (
+                {step === 2 && !isAnalyzing && imagePreview && (
                     <div className="p-6 bill-float-up">
                         {/* Compliance Alert */}
-                        {(!billNumber || !vendorPan) && !isAnalyzing && (
+                        {(!billNumber || !vendorPan) && (
                             <div className="mb-5 flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 bill-float-up">
                                 <Shield size={18} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                                 <div>
@@ -404,14 +466,6 @@ const BillUpload: React.FC<BillUploadProps> = ({
                             <div className="space-y-3">
                                 <div className="relative rounded-2xl overflow-hidden border-2 border-gray-100 dark:border-gray-700 bg-black group">
                                     <img src={imagePreview} alt="Receipt Preview" className="w-full h-auto object-contain max-h-96" />
-                                    {isAnalyzing && (
-                                        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60 flex items-center justify-center flex-col text-white">
-                                            <div className="absolute inset-x-0 h-0.5 bg-blue-500/80 bill-scan-line shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
-                                            <Loader2 size={28} className="animate-spin mb-2" />
-                                            <p className="text-sm font-semibold">AI Extracting Details...</p>
-                                            <p className="text-xs text-gray-300">Please wait</p>
-                                        </div>
-                                    )}
                                 </div>
                                 <button onClick={() => { setImagePreview(null); setStep(1); }} className="flex items-center justify-center w-full py-2.5 text-sm text-red-500 hover:text-red-600 font-medium border border-red-200 dark:border-red-900/50 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-[0.98]">
                                     <Trash2 size={14} className="mr-2" /> Retake / Re-upload
@@ -527,7 +581,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                             <span className="shrink-0 w-2 h-2 rounded-full bg-amber-500" title={`Missing: ${missing.join(', ')}`} />
                                         )}
                                     </div>
-                                    <p className="text-[11px] text-gray-500">{t.date.includes('T') ? t.date.split('T')[0] : t.date} · {t.category}</p>
+                                    <p className="text-[11px] text-gray-500">{(t.createdAt || t.date).split('T')[0]} · {t.category}</p>
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="font-bold text-gray-900 dark:text-white text-sm">NPR {t.amount.toLocaleString()}</p>
@@ -553,7 +607,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                         <thead>
                             <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
                                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">SN</th>
-                                <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                                <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Upload Date</th>
                                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendor</th>
                                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
                                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
@@ -568,7 +622,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                     return (
                                         <tr key={t.id} className="hover:bg-blue-50/30 dark:hover:bg-gray-700/30 transition-colors">
                                             <td className="px-5 py-3.5 text-sm text-gray-400 font-medium">{index + 1}</td>
-                                            <td className="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">{t.date.includes('T') ? t.date.split('T')[0] : t.date}</td>
+                                            <td className="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">{(t.createdAt || t.date).split('T')[0]}</td>
                                             <td className="px-5 py-3.5">
                                                 <div className="flex items-center gap-2.5">
                                                     {t.imageUrl && <img src={t.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />}
@@ -688,8 +742,14 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                             )}
                                             <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                                                 <Calendar size={14} className="text-gray-400 shrink-0" />
-                                                <div><p className="text-[10px] text-gray-400 uppercase tracking-wider">Date</p><p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedBill.date.includes('T') ? selectedBill.date.split('T')[0] : selectedBill.date}</p></div>
+                                                <div><p className="text-[10px] text-gray-400 uppercase tracking-wider">Bill Date</p><p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedBill.date.includes('T') ? selectedBill.date.split('T')[0] : selectedBill.date}</p></div>
                                             </div>
+                                            {selectedBill.createdAt && (
+                                                <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                                                    <Calendar size={14} className="text-gray-400 shrink-0" />
+                                                    <div><p className="text-[10px] text-gray-400 uppercase tracking-wider">Upload Date</p><p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedBill.createdAt.split('T')[0]}</p></div>
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                                                 <Tag size={14} className="text-gray-400 shrink-0" />
                                                 <div><p className="text-[10px] text-gray-400 uppercase tracking-wider">Category</p><span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{selectedBill.category}</span></div>

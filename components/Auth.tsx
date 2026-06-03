@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, UploadCloud, CheckCircle, Smartphone, Mail, Fingerprint, AlertCircle, MapPin, Calculator, ShieldCheck, User, Building, Phone, Key, ArrowRight, Loader2 } from 'lucide-react';
 import { BusinessProfile, UserRole } from '../types';
 import { api } from '../services/api';
-import { BiometricService } from '../services/biometricService';
 import { Preferences } from '@capacitor/preferences'
 
 interface AuthProps {
@@ -15,60 +14,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  
-  // Biometric State
-  const [showBiometric, setShowBiometric] = useState(false);
-
-  useEffect(() => { checkBiometrics(); }, []);
-
-  const checkBiometrics = async () => {
-    const isHardwareAvailable = await BiometricService.isAvailable();
-    const storedCredentials = await BiometricService.getCredentials(); 
-    const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
-
-    if (isHardwareAvailable && storedCredentials && storedProfile) {
-      setShowBiometric(true);
-    } else {
-      setShowBiometric(false);
-    }
-  };
-
-  const handleBiometricLogin = async () => {
-    setLoading(true); setError(null);
-    try {
-      const verified = await BiometricService.verifyIdentity();
-      if (!verified) { setError("Biometric authentication failed."); return; }
-      
-      const creds = await BiometricService.getCredentials();
-      if (!creds || !creds.token) { setError("Session expired. Please login with password again."); return; }
-
-      try {
-        const base64Url = creds.token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const tokenPayload = JSON.parse(window.atob(base64));
-        if (tokenPayload.exp * 1000 < Date.now()) {
-          await BiometricService.clearCredentials();
-          setError("Session expired. Please login with password to renew.");
-          setShowBiometric(false);
-          return;
-        }
-      } catch (e) {}
-
-      const { value } = await Preferences.get({ key: 'userProfile' });
-      if (!value) {
-        await BiometricService.clearCredentials();
-        setShowBiometric(false);
-        setError("Profile data missing. Please login with password again.");
-        return;
-      }
-
-      onLogin(JSON.parse(value), creds.token);
-    } catch (error) {
-      setError("Biometric authentication failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Form States
   const [phone, setPhone] = useState('');
@@ -129,19 +74,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         role: data.user.role as UserRole,
         isVerified: data.business ? data.business.isVerified : true,
         taxSystem: data.business?.taxSystem || 'PAN',
-        annualTurnover: data.business?.annualTurnover || 0,
-        enableBiometricLogin: data.business?.enableBiometricLogin || false
+        annualTurnover: data.business?.annualTurnover || 0
       };
 
       await Preferences.set({ key: 'token', value: data.token });
       await Preferences.set({ key: 'userProfile', value: JSON.stringify(profile) });
-
-      if (profile.enableBiometricLogin) {
-        await BiometricService.setCredentials(profile.email || profile.phone, data.token);
-      } else {
-        await BiometricService.clearCredentials();
-      }
-      
       onLogin(profile, data.token);
     } catch (err: any) {
       if (err.message === 'Failed to fetch') setError("Cannot reach server. Ensure backend is running.");
@@ -435,26 +372,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 {loading ? <Loader2 className="animate-spin" size={18} /> : 'Sign In'}
                 {!loading && <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
               </button>
-
-              {showBiometric && (
-                <div className="mt-8">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="px-4 bg-white dark:bg-gray-900 text-gray-500 font-medium">Or continue with</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <button onClick={handleBiometricLogin} type="button" className="w-full inline-flex justify-center items-center py-3.5 px-4 border-2 border-gray-100 dark:border-gray-800 rounded-xl shadow-sm bg-white dark:bg-gray-900 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 transition-all active:scale-[0.98]">
-                      {loading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Fingerprint size={20} className="mr-2 text-indigo-500" />}
-                      Biometric Login
-                    </button>
-                  </div>
-                </div>
-              )}
 
               <div className="text-center mt-12 pt-6 border-t border-gray-100 dark:border-gray-800">
                 <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">

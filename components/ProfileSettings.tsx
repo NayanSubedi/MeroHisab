@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BusinessProfile } from '../types';
 import { api } from '../services/api';
-import { BiometricService } from '../services/biometricService';
 import { Save, Lock, User, Building, MapPin, CheckCircle, AlertCircle, Camera, Fingerprint, Loader2, Shield, Settings, ChevronRight } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
 
@@ -26,21 +25,10 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
   const [zipCode, setZipCode] = useState(userProfile.zipCode || '');
   const [logo, setLogo] = useState<string | null>(userProfile.logo || null);
 
-  // App Settings
-  const [enableBiometric, setEnableBiometric] = useState(userProfile.enableBiometricLogin || false);
-  const [isBioHardwareAvailable, setIsBioHardwareAvailable] = useState(false);
-
   // User Info State
   const [ownerName, setOwnerName] = useState(userProfile.ownerName);
   const [email, setEmail] = useState(userProfile.email);
   const [newPassword, setNewPassword] = useState('');
-
-  useEffect(() => { checkBioAvailability(); }, []);
-
-  const checkBioAvailability = async () => {
-    const available = await BiometricService.isAvailable();
-    setIsBioHardwareAvailable(available);
-  };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -57,26 +45,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
 
   const triggerFileInput = () => { fileInputRef.current?.click(); };
 
-  const handleBiometricToggle = async (checked: boolean) => {
-    setEnableBiometric(checked);
-    if (checked) {
-      if (!isBioHardwareAvailable) {
-        alert("Biometric hardware (Fingerprint/FaceID) is not available on this device.");
-        setEnableBiometric(false);
-        return;
-      }
-      const verified = await BiometricService.verifyIdentity();
-      if (verified) {
-        BiometricService.setCredentials(userProfile.phone || userProfile.email, token);
-      } else {
-        setEnableBiometric(false);
-        alert("Verification failed. Biometrics disabled.");
-      }
-    } else {
-      BiometricService.clearCredentials();
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -86,8 +54,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
       name: ownerName, email, newPassword, businessName,
       addressLine1, addressLine2, city, province, country, zipCode, logo,
       taxSystem: userProfile.taxSystem,
-      annualTurnover: userProfile.annualTurnover,
-      enableBiometricLogin: enableBiometric
+      annualTurnover: userProfile.annualTurnover
     };
 
     try {
@@ -98,11 +65,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
         addressLine1, addressLine2, city, province, country, zipCode,
         logo: logo || undefined,
         taxSystem: userProfile.taxSystem,
-        annualTurnover: userProfile.annualTurnover,
-        enableBiometricLogin: enableBiometric
+        annualTurnover: userProfile.annualTurnover
       };
       await Preferences.set({ key: 'userProfile', value: JSON.stringify(updatedProfile) });
-      if (!enableBiometric) BiometricService.clearCredentials();
       onUpdate(updatedProfile);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setNewPassword('');
@@ -196,34 +161,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
             </div>
           </div>
 
-          {/* Biometric */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="p-1.5 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <Fingerprint size={14} className="text-purple-500" />
-              </div>
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">App Settings</h3>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-3">
-                <span className="block text-sm font-semibold text-gray-700 dark:text-gray-200">Biometric Login</span>
-                <span className="text-[10px] text-gray-400">Fingerprint / Face ID</span>
-                {!isBioHardwareAvailable && (
-                  <span className="block text-[10px] text-red-400 mt-0.5">Hardware not available</span>
-                )}
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={enableBiometric}
-                  disabled={!isBioHardwareAvailable}
-                  onChange={e => handleBiometricToggle(e.target.checked)}
-                />
-                <div className="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm dark:border-gray-600 peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-          </div>
 
           {/* Tax Info (read-only) */}
           <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">

@@ -7,7 +7,7 @@
 const PROD_URL = 'http://localhost:5000'; 
 
 // Fallback for local development
-const LOCAL_IP = '192.168.1.66'; // Your local computer IP
+const LOCAL_IP = '192.168.1.69'; // Your local computer IP
 const PORT = '5000';
 
 // Logic to select and sanitize the correct URL

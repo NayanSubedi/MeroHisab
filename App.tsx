@@ -15,7 +15,6 @@ import { BusinessProfile, Transaction, UserRole, User } from './types';
 import { Loader2 } from 'lucide-react';
 import { api } from './services/api';
 import { Preferences } from '@capacitor/preferences';
-import { BiometricService } from './services/biometricService';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -33,16 +32,7 @@ const App: React.FC = () => {
     console.log("Logging out & clearing session...");
     await Preferences.remove({ key: 'token' });
 
-    // ✅ FIX: Only clear userProfile if biometrics are NOT enabled.
-    // If enabled, we must retain it to restore the app state during Biometric Login.
-    try {
-      const credentials = await BiometricService.getCredentials();
-      if (!credentials) {
-        await Preferences.remove({ key: 'userProfile' });
-      }
-    } catch (e) {
-      await Preferences.remove({ key: 'userProfile' });
-    }
+    await Preferences.remove({ key: 'userProfile' });
 
     setIsAuthenticated(false);
     setUserProfile(null);
@@ -219,7 +209,7 @@ const App: React.FC = () => {
       case 'invoice':
         return <InvoiceGenerator businessProfile={userProfile} onSaveInvoice={addTransaction} transactions={transactions} />;
       case 'daily':
-        return <DailyTransactions transactions={transactions} />;
+        return <DailyTransactions transactions={transactions} business={userProfile} />;
       case 'reports':
         return userProfile.role === UserRole.STAFF
           ? <InvoiceGenerator businessProfile={userProfile} onSaveInvoice={addTransaction} transactions={transactions} />

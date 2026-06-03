@@ -66,7 +66,7 @@ app.post('/api/auth/register', async (req, res) => {
   const { 
     businessName, pan, ownerName, phone, email, type, password, panPhoto,
     addressLine1, addressLine2, city, province, country, zipCode,
-    taxSystem, annualTurnover, enableBiometricLogin
+    taxSystem, annualTurnover
   } = req.body;
 
   try {
@@ -89,8 +89,7 @@ app.post('/api/auth/register', async (req, res) => {
         addressLine1, addressLine2, city, province, country, zipCode,
         ownerName, phone, email, type: businessType,
         isVerified: false, panPhoto: panPhoto || null,
-        taxSystem: taxSystem || 'PAN', annualTurnover: annualTurnover || 0,
-        enableBiometricLogin: enableBiometricLogin || false
+        taxSystem: taxSystem || 'PAN', annualTurnover: annualTurnover || 0
       });
 
       await User.create({
@@ -125,6 +124,10 @@ app.post('/api/auth/login', async (req, res) => {
         business = await Business.findById(user.businessId).lean();
     }
 
+    if (user.role === 'OWNER' && !business) {
+        return res.status(400).json({ message: 'Critical Error: Attached Business Profile could not be found. Please register a new account or contact support.' });
+    }
+
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) return res.status(400).json({ message: 'Invalid credentials' });
 
@@ -149,7 +152,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.put('/api/user/profile', authenticate, async (req, res) => {
   const { 
       name, email, newPassword, businessName, addressLine1, addressLine2, 
-      city, province, country, zipCode, logo, taxSystem, annualTurnover, enableBiometricLogin
+      city, province, country, zipCode, logo, taxSystem, annualTurnover
   } = req.body;
 
   try {
@@ -170,7 +173,7 @@ app.put('/api/user/profile', authenticate, async (req, res) => {
               user.businessId,
               {
                   name: businessName, address: formattedAddress, addressLine1, addressLine2, 
-                  city, province, country, zipCode, logo, taxSystem, annualTurnover, enableBiometricLogin
+                  city, province, country, zipCode, logo, taxSystem, annualTurnover
               },
               { new: true }
           ).lean();
@@ -369,6 +372,6 @@ app.use((req, res) => {
   res.status(404).json({ message: `Route ${req.method} ${req.url} not found` });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server is running on port ${PORT}`);
 });

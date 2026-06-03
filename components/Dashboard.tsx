@@ -37,7 +37,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
 
   // Recent transactions (last 5)
   const recentTransactions = [...transactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime())
     .slice(0, 5);
 
   return (
@@ -149,9 +149,16 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
                   }`}>
                     {t.type === TransactionType.SALES ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{t.partyName || 'Unknown'}</p>
-                    <p className="text-[10px] text-gray-400 truncate">{t.category} • {t.date.split('T')[0]}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{t.partyName || 'Unknown'}</p>
+                      {t.type === TransactionType.EXPENSE && !t.partyPan && (
+                        <span title="Missing PAN Number" className="flex shrink-0">
+                          <AlertTriangle size={12} className="text-amber-500" />
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-400 truncate">{t.category} • {(t.createdAt || t.date).split('T')[0]}</p>
                   </div>
                 </div>
                 <span className={`text-sm font-bold flex-shrink-0 ml-2 ${

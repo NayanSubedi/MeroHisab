@@ -69,6 +69,7 @@ export interface Transaction {
   billNumber?: string;
   imageUrl?: string;
   invoiceDetails?: InvoiceDetails;
+  createdAt?: string; // Auto-generated upload timestamp by MongoDB
 }
 
 export interface User {
@@ -107,6 +108,4 @@ export interface BusinessProfile {
   taxSystem: 'PAN' | 'VAT'; 
   annualTurnover?: number;
   
-  // App Settings
-  enableBiometricLogin?: boolean;
 }

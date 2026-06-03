@@ -25,8 +25,7 @@ const businessSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   rejectionReason: String,
   panPhoto: String,
-  logo: String,
-  enableBiometricLogin: { type: Boolean, default: false }
+  logo: String
 }, { timestamps: true });
 
 businessSchema.pre('findOneAndDelete', async function() {

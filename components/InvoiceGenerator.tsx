@@ -612,7 +612,7 @@ interface InvoicePreviewProps {
     isGenerating: boolean;
 }
 
-const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, business, onClose, onDownload, isGenerating }) => {
+export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, business, onClose, onDownload, isGenerating }) => {
     
     // Fallbacks to securely capture customer details if older databases mapped it differently 
     const details = invoice.invoiceDetails as any;

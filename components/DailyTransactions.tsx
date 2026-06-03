@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Transaction, TransactionType } from '../types';
+import { Transaction, TransactionType, BusinessProfile } from '../types';
+import { InvoicePreviewModal } from './InvoiceGenerator';
 import { 
   Calendar, 
   Download, 
@@ -14,16 +15,19 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Search,
-  Filter
+  Filter,
+  X // Used for closing modals
 } from 'lucide-react';
 
 declare var html2pdf: any;
 
 interface DailyTransactionsProps {
   transactions: Transaction[];
+  business: BusinessProfile | null;
 }
 
-const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) => {
+const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, business }) => {
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [showAll, setShowAll] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -32,12 +36,13 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
 
   const displayedTransactions = transactions.filter(t => {
     if (showAll) return true;
-    if (!t.date) return false;
-    const transactionDate = t.date.includes('T') ? t.date.split('T')[0] : t.date;
+    const baseDate = t.createdAt || t.date;
+    if (!baseDate) return false;
+    const transactionDate = baseDate.includes('T') ? baseDate.split('T')[0] : baseDate;
     return transactionDate === selectedDate;
   });
 
-  displayedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  displayedTransactions.sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
 
   useEffect(() => { setCurrentPage(1); }, [selectedDate, showAll]);
 
@@ -73,7 +78,8 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
   const handleDownloadCSV = () => {
     const headers = ["Date", "Type", "Party Name", "Category", "Bill Number", "Amount"];
     const rows = displayedTransactions.map(t => {
-      const date = t.date ? t.date.split('T')[0] : '';
+      const baseDate = t.createdAt || t.date;
+      const date = baseDate ? baseDate.split('T')[0] : '';
       const amount = t.type === TransactionType.EXPENSE ? -t.amount : t.amount;
       const partyName = `"${t.partyName || 'Unknown'}"`;
       return [date, t.type, partyName, t.category, t.billNumber || '', amount].join(",");
@@ -217,9 +223,16 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <h4 className="font-bold text-gray-900 dark:text-white text-sm truncate mr-2">
-                        {t.partyName || 'Unknown Party'}
-                      </h4>
+                      <div className="flex items-center gap-1.5 mr-2">
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm truncate">
+                          {t.partyName || 'Unknown Party'}
+                        </h4>
+                        {t.type === TransactionType.EXPENSE && !t.partyPan && (
+                          <span title="Missing PAN Number" className="flex shrink-0">
+                            <AlertTriangle size={12} className="text-amber-500" />
+                          </span>
+                        )}
+                      </div>
                       <span className={`text-sm font-extrabold flex-shrink-0 ${
                         t.type === TransactionType.SALES 
                           ? 'text-emerald-600 dark:text-emerald-400' 
@@ -229,10 +242,11 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
                         {t.amount.toLocaleString(undefined, {maximumFractionDigits: 0})}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                    <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-2">
                       <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md font-medium">{t.category}</span>
-                      {showAll && <span>{t.date.split('T')[0]}</span>}
+                      {showAll && <span>{(t.createdAt || t.date).split('T')[0]}</span>}
                       {t.billNumber && <span className="font-mono">#{t.billNumber}</span>}
+                      <button onClick={() => setSelectedTransaction(t)} className="ml-auto flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md active:scale-95 transition-transform"><Search size={10} /> View</button>
                     </div>
                   </div>
                 </div>
@@ -248,13 +262,14 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
                     <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Party</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Category</th>
                     <th className="px-5 py-3 text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                    <th className="px-5 py-3 text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                   {currentItems.map((t) => (
                     <tr key={t.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
                       <td className="px-5 py-3.5 whitespace-nowrap text-xs text-gray-400 font-medium">
-                        {t.date.split('T')[0]}
+                        {(t.createdAt || t.date).split('T')[0]}
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -269,7 +284,14 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
                             }
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-800 dark:text-white">{t.partyName}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-semibold text-gray-800 dark:text-white">{t.partyName}</p>
+                              {t.type === TransactionType.EXPENSE && !t.partyPan && (
+                                <span title="Missing PAN Number" className="flex shrink-0">
+                                  <AlertTriangle size={12} className="text-amber-500" />
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-gray-400 font-mono">#{t.billNumber || '---'}</p>
                           </div>
                         </div>
@@ -287,6 +309,11 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
                         {t.type === TransactionType.EXPENSE ? '-' : '+'}
                         {t.amount.toLocaleString(undefined, {maximumFractionDigits: 0})}
                       </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap text-center">
+                        <button onClick={() => setSelectedTransaction(t)} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 mx-auto">
+                          <Search size={12} /> View
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -300,6 +327,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
                     }`}>
                       {netBalance >= 0 ? '+' : ''}{netBalance.toLocaleString(undefined, {maximumFractionDigits: 0})}
                     </td>
+                    <td className="px-5 py-3"></td>
                   </tr>
                 </tfoot>
               </table>
@@ -366,6 +394,90 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions }) =
           </button>
         </div>
       )}
+
+      {/* ═══════ MODAL ═══════ */}
+      {selectedTransaction && selectedTransaction.invoiceDetails && business ? (
+        <InvoicePreviewModal
+          invoice={selectedTransaction}
+          business={business}
+          onClose={() => setSelectedTransaction(null)}
+          onDownload={() => { /* Download functionality handled directly if needed, or disabled in history */ }}
+          isGenerating={false}
+        />
+      ) : selectedTransaction ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setSelectedTransaction(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-500"><FileText size={16} /></div> Transaction Record
+              </h3>
+              <button onClick={() => setSelectedTransaction(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-5 md:p-6 overflow-y-auto space-y-5">
+              <div className="flex flex-col md:flex-row gap-5 items-start">
+                  <div className="flex-1 w-full space-y-3">
+                      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50 space-y-3">
+                          <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Amount</span>
+                              <span className={`text-lg font-extrabold ${selectedTransaction.type === TransactionType.SALES ? 'text-emerald-600' : 'text-red-500'}`}>
+                                  NPR {selectedTransaction.amount.toLocaleString()}
+                              </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Date</span>
+                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{selectedTransaction.date.split('T')[0]}</span>
+                          </div>
+                          {selectedTransaction.createdAt && (
+                              <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Uploaded</span>
+                                  <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{selectedTransaction.createdAt.split('T')[0]}</span>
+                              </div>
+                          )}
+                          <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Category</span>
+                              <span className="text-xs font-bold text-gray-700 bg-gray-200 dark:bg-gray-700 dark:text-gray-200 px-2 py-0.5 rounded-md">{selectedTransaction.category}</span>
+                          </div>
+                      </div>
+                      
+                      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50 space-y-3">
+                          <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Party</span>
+                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{selectedTransaction.partyName || 'N/A'}</span>
+                          </div>
+                          {selectedTransaction.partyPan && (
+                          <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">PAN</span>
+                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 font-mono">{selectedTransaction.partyPan}</span>
+                          </div>
+                          )}
+                          {selectedTransaction.billNumber && (
+                          <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Ref/Bill #</span>
+                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 font-mono">{selectedTransaction.billNumber}</span>
+                          </div>
+                          )}
+                      </div>
+                  </div>
+
+                  <div className="w-full md:w-[200px] shrink-0 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 h-[280px] flex items-center justify-center overflow-hidden flex-col">
+                      {selectedTransaction.imageUrl ? (
+                          <img src={selectedTransaction.imageUrl} alt="Receipt" className="w-full h-full object-contain cursor-pointer hover:scale-105 transition-transform" title="Click to open" onClick={() => window.open(selectedTransaction.imageUrl, '_blank')} />
+                      ) : (
+                          <div className="flex flex-col items-center justify-center opacity-40 text-gray-500">
+                             <FileText size={32} className="mb-2" />
+                             <p className="text-[10px] uppercase font-bold tracking-widest">No Receipt</p>
+                          </div>
+                      )}
+                  </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
     </div>
   );
 };
