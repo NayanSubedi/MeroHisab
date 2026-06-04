@@ -203,7 +203,7 @@
 
 //       {/* Empty State */}
 //       {!prediction && !isLoading && (
-//         <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-10 text-center shadow-sm">
+//         <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-300 dark:border-gray-700 p-10 text-center shadow-sm">
 //           <div className="mx-auto w-20 h-20 bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center mb-5">
 //             <BarChart3 size={36} className="text-violet-600 dark:text-violet-400" />
 //           </div>
@@ -226,14 +226,14 @@
 //         <div className="space-y-4 animate-pulse">
 //           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 //             {[1, 2, 3].map(i => (
-//               <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+//               <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-300 dark:border-gray-700">
 //                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-3" />
 //                 <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2" />
 //                 <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24" />
 //               </div>
 //             ))}
 //           </div>
-//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-300 dark:border-gray-700">
 //             <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
 //           </div>
 //         </div>
@@ -261,7 +261,7 @@
 //             <button
 //               onClick={handleDownloadPDF}
 //               disabled={isExporting}
-//               className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95 shadow-sm disabled:opacity-50"
+//               className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95 shadow-sm disabled:opacity-50"
 //             >
 //               {isExporting ? (
 //                 <><Loader2 size={16} className="animate-spin" /> Exporting...</>
@@ -276,7 +276,7 @@
 //             {prediction.predictions.map((p, i) => (
 //               <div
 //                 key={i}
-//                 className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
+//                 className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-300 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
 //               >
 //                 {/* Subtle gradient accent */}
 //                 <div className={`absolute top-0 left-0 right-0 h-1 ${
@@ -311,7 +311,7 @@
 //                       -{p.predictedExpense.toLocaleString()}
 //                     </span>
 //                   </div>
-//                   <div className="pt-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+//                   <div className="pt-2 border-t border-gray-300 dark:border-gray-700 flex items-center justify-between">
 //                     <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-1">
 //                       {getNetIcon(p.predictedNet)} Net Flow
 //                     </span>
@@ -327,7 +327,7 @@
 //           </div>
 
 //           {/* Chart */}
-//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-300 dark:border-gray-700 shadow-sm">
 //             <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
 //               <BarChart3 size={16} className="text-violet-500" />
 //               Historical + Predicted Trend
@@ -429,7 +429,7 @@
 //           )}
 
 //           {/* Summary Bar */}
-//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-300 dark:border-gray-700 shadow-sm">
 //             <div className="grid grid-cols-3 gap-4 text-center">
 //               <div>
 //                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">3-Month Projected Income</p>

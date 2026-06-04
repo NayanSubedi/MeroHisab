@@ -8,8 +8,9 @@ const invoiceStyles = `
 @keyframes inv-pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
 @keyframes inv-shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
 .inv-float-up { animation: inv-float-up 0.35s ease-out both; }
-.inv-shimmer-btn { background: linear-gradient(90deg,transparent 30%,rgba(255,255,255,0.15) 50%,transparent 70%); background-size: 200% 100%; }
-.inv-shimmer-btn:hover { animation: inv-shimmer 1.5s infinite; }
+.inv-shimmer-btn { position: relative; overflow: hidden; }
+.inv-shimmer-btn::after { content: ''; position: absolute; top:0; left:0; width: 100%; height: 100%; background: linear-gradient(90deg,transparent 30%,rgba(255,255,255,0.2) 50%,transparent 70%); background-size: 200% 100%; pointer-events: none; }
+.inv-shimmer-btn:hover::after { animation: inv-shimmer 1.5s infinite; }
 `;
 
 // Declare html2pdf
@@ -209,63 +210,22 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
           const element = document.getElementById('invoice-preview-content');
           if (!element) throw new Error("Invoice content not found");
 
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          // Use html2pdf for all devices - direct PDF download
+          const opt = {
+              margin: 0.3,
+              filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
+              image: { type: 'jpeg', quality: 1 },
+              html2canvas: { 
+                  scale: 2, 
+                  useCORS: true, 
+                  logging: false,
+                  backgroundColor: '#ffffff'
+              },
+              jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+          };
 
-          if (isMobile) {
-              // Mobile: use print dialog instead of html2pdf
-              const printWindow = window.open('', '_blank');
-              if (!printWindow) {
-                  showToast("Please allow popups to download the invoice.", "error");
-                  return;
-              }
-
-              printWindow.document.write(`
-                  <!DOCTYPE html>
-                  <html>
-                  <head>
-                      <meta name="viewport" content="width=device-width, initial-scale=1">
-                      <title>Invoice_${selectedInvoice?.billNumber}</title>
-                      <style>
-                          body { font-family: Arial, sans-serif; margin: 20px; color: #000; }
-                          table { width: 100%; border-collapse: collapse; }
-                          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                          th { background: #f5f5f5; font-weight: bold; }
-                          @media print {
-                              body { margin: 0; }
-                              button { display: none; }
-                          }
-                      </style>
-                  </head>
-                  <body>
-                      ${element.innerHTML}
-                      <br/>
-                      <button onclick="window.print()" style="padding:12px 24px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;width:100%">
-                          Save as PDF / Print
-                      </button>
-                  </body>
-                  </html>
-              `);
-              printWindow.document.close();
-
-          } else {
-              // Desktop: Rely entirely on html2pdf using the live visible element.
-              // No manual cloning needed, avoiding blank coordinates/rendering issues.
-              const opt = {
-                  margin: 0.3,
-                  filename: `Invoice_${selectedInvoice?.billNumber}.pdf`,
-                  image: { type: 'jpeg', quality: 1 },
-                  html2canvas: { 
-                      scale: 2, 
-                      useCORS: true, 
-                      logging: false,
-                      backgroundColor: '#ffffff'
-                  },
-                  jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-              };
-
-              await html2pdf().set(opt).from(element).save();
-              showToast("PDF Downloaded Successfully!", "success");
-          }
+          await html2pdf().set(opt).from(element).save();
+          showToast("PDF Downloaded Successfully!", "success");
 
       } catch (error: any) {
           console.error("PDF Generation failed:", error);
@@ -329,8 +289,8 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
           </div>
 
           {/* --- LEFT: HISTORY --- */}
-          <div className="w-full lg:w-1/3 flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden h-[calc(100vh-220px)] lg:h-auto">
-              <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 space-y-3">
+          <div className="w-full lg:w-1/3 flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700 overflow-hidden h-[calc(100vh-220px)] lg:h-auto">
+              <div className="p-4 border-b border-gray-300 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 space-y-3">
                   <div className="flex justify-between items-center">
                       <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                           <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30"><FileText size={14} className="text-blue-600 dark:text-blue-400" /></div>
@@ -342,7 +302,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                   </div>
                   <div className="relative">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input type="text" value={invoiceSearch} onChange={e => { setInvoiceSearch(e.target.value); setCurrentPage(1); }} placeholder="Search customer, invoice..." className="w-full pl-9 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      <input type="text" value={invoiceSearch} onChange={e => { setInvoiceSearch(e.target.value); setCurrentPage(1); }} placeholder="Search customer, invoice..." className="w-full pl-9 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                   </div>
               </div>
               
@@ -352,7 +312,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                           const pm = (inv.invoiceDetails as any)?.paymentMethod || 'Cash';
                           const borderColor = pm === 'Credit' ? 'border-l-amber-500' : 'border-l-green-500';
                           return (
-                              <div key={inv.id} className={`bg-white dark:bg-gray-700/50 p-3.5 rounded-xl border border-gray-100 dark:border-gray-600 border-l-[3px] ${borderColor} hover:shadow-md hover:-translate-y-0.5 cursor-pointer transition-all duration-200 inv-float-up`} style={{animationDelay: `${idx * 0.04}s`}} onClick={() => { setSelectedInvoice(inv); setShowPreviewModal(true); }}>
+                              <div key={inv.id} className={`bg-white dark:bg-gray-700/50 p-3.5 rounded-xl border border-gray-300 dark:border-gray-600 border-l-[3px] ${borderColor} hover:shadow-md hover:-translate-y-0.5 cursor-pointer transition-all duration-200 inv-float-up`} style={{animationDelay: `${idx * 0.04}s`}} onClick={() => { setSelectedInvoice(inv); setShowPreviewModal(true); }}>
                                   <div className="flex justify-between items-start mb-1.5">
                                       <h4 className="font-bold text-gray-900 dark:text-white text-sm truncate pr-2">{inv.partyName}</h4>
                                       <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 shrink-0">{inv.billNumber}</span>
@@ -378,7 +338,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
               </div>
 
               {totalPages > 1 && (
-                <div className="p-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex justify-between items-center text-sm">
+                <div className="p-3 border-t border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex justify-between items-center text-sm">
                     <button onClick={prevPage} disabled={currentPage === 1} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 text-gray-500 transition-colors"><ChevronLeft size={16} /></button>
                     <span className="text-gray-400 font-medium text-xs">{currentPage} / {totalPages}</span>
                     <button onClick={nextPage} disabled={currentPage === totalPages} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 text-gray-500 transition-colors"><ChevronRight size={16} /></button>
@@ -391,12 +351,12 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
               flex-col bg-white dark:bg-gray-800 overflow-hidden transition-all duration-300
               ${isMobileFormOpen 
                   ? 'fixed inset-0 z-50 w-full h-full rounded-none flex animate-in slide-in-from-bottom-5' // Mobile Open
-                  : 'hidden lg:flex lg:w-2/3 lg:static lg:h-auto lg:rounded-xl lg:shadow-sm lg:border lg:border-gray-100 lg:dark:border-gray-700' // Desktop or Hidden
+                  : 'hidden lg:flex lg:w-2/3 lg:static lg:h-auto lg:rounded-xl lg:shadow-sm lg:border lg:border-gray-300 lg:dark:border-gray-700' // Desktop or Hidden
               }
           `}>
                 
                 {/* Workspace Header */}
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 z-10 gap-3">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center px-4 sm:px-6 py-4 border-b border-gray-300 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 z-10 gap-3">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setIsMobileFormOpen(false)} className="lg:hidden p-2 -ml-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
                             <ArrowLeft size={24} />
@@ -412,23 +372,23 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                     
                     <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
                         {isVatRegistered && (
-                            <div className="flex bg-gray-100 dark:bg-gray-700/50 rounded-lg p-1 border border-gray-200 dark:border-gray-600">
+                            <div className="flex bg-gray-100 dark:bg-gray-700/50 rounded-lg p-1 border border-gray-300 dark:border-gray-600">
                                 <button onClick={() => setIsTaxInclusive(true)} className={`text-xs px-3 py-1.5 rounded-md font-semibold transition-all ${isTaxInclusive ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-700 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>Incl.</button>
                                 <button onClick={() => setIsTaxInclusive(false)} className={`text-xs px-3 py-1.5 rounded-md font-semibold transition-all ${!isTaxInclusive ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-700 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>Excl.</button>
                             </div>
                         )}
-                        <button onClick={resetForm} className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all shadow-sm active:scale-95" title="Reset Form">
+                        <button onClick={resetForm} className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700 rounded-lg transition-all shadow-sm active:scale-95" title="Reset Form">
                             <RefreshCw size={16} />
                         </button>
                     </div>
                 </div>
 
                 {/* Scrollable Form Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-gray-50/30 dark:bg-gray-900/10 pb-24 lg:pb-6">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-gray-50/30 dark:bg-gray-900/10 pb-32 lg:pb-10">
                     
                     {/* Row 1: Client & Meta */}
                     <div className="flex flex-col md:grid md:grid-cols-12 gap-5">
-                        <div className="col-span-12 md:col-span-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="col-span-12 md:col-span-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-shadow">
                              <div className="flex items-center gap-2 mb-4">
                                 <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg"><User size={14} className="text-blue-600 dark:text-blue-400"/></div>
                                 <span className="text-gray-800 dark:text-white font-bold text-sm">Client Details</span>
@@ -446,7 +406,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                                         className={`w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border text-sm outline-none transition-all
                                             ${errors.customerName 
                                                 ? 'border-red-400 focus:ring-2 focus:ring-red-500/20 bg-red-50/30 dark:bg-red-900/10' 
-                                                : 'border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50'
+                                                : 'border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50'
                                             }`}
                                         placeholder="Customer Name *" 
                                     />
@@ -457,25 +417,25 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                                         </div>
                                     )}
                                 </div>
-                                <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all" placeholder="Phone (Optional)" />
-                                <input type="text" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all" placeholder="Address (Optional)" />
-                                <input type="text" value={customerPan} onChange={e => setCustomerPan(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all" placeholder="PAN (Optional)" />
+                                <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border border-gray-300 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all" placeholder="Phone (Optional)" />
+                                <input type="text" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border border-gray-300 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all" placeholder="Address (Optional)" />
+                                <input type="text" value={customerPan} maxLength={9} onChange={e => { const val = e.target.value; if (val === '' || /^\d{0,9}$/.test(val)) setCustomerPan(val); }} className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border border-gray-300 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all" placeholder="PAN (Optional)" />
                              </div>
                         </div>
-                        <div className="col-span-12 md:col-span-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="col-span-12 md:col-span-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg"><Calendar size={14} className="text-indigo-600 dark:text-indigo-400"/></div>
                                 <span className="text-gray-800 dark:text-white font-bold text-sm">Invoice Date</span>
                              </div>
-                            <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all font-medium text-gray-700 dark:text-gray-200" />
+                            <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-700/50 rounded-xl border border-gray-300 dark:border-gray-600 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all font-medium text-gray-700 dark:text-gray-200" />
                         </div>
                     </div>
 
                     {/* Row 2: Items Table */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left min-w-[600px]">
-                                <thead className="bg-gray-50/80 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-semibold text-[11px] uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+                                <thead className="bg-gray-50/80 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-semibold text-[11px] uppercase tracking-wider border-b border-gray-300 dark:border-gray-700">
                                     <tr>
                                         <th className="px-4 py-3.5 w-[5%] text-center">#</th>
                                         <th className="px-4 py-3.5 w-[35%]">Item Description</th>
@@ -485,7 +445,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                                         <th className="px-4 py-3.5 w-[10%]"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                                <tbody className="divide-y divide-gray-300 dark:divide-gray-700/50">
                                     {items.map((item, index) => (
                                         <tr key={item.id} className="hover:bg-blue-50/30 dark:hover:bg-gray-700/30 transition-colors group">
                                             <td className="px-4 py-2.5 text-center text-gray-400 dark:text-gray-500 font-medium">{index + 1}</td>
@@ -493,7 +453,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                                                 <input type="text" value={item.description} onChange={e => updateItem(item.id, 'description', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-1 placeholder-gray-300 dark:placeholder-gray-600 text-gray-900 dark:text-white font-medium outline-none" placeholder="What are you selling?" />
                                             </td>
                                             <td className="px-4 py-2.5">
-                                                <input type="number" value={item.quantity} onChange={e => updateItem(item.id, 'quantity', e.target.valueAsNumber)} className="w-full bg-gray-50/50 dark:bg-gray-900/50 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 rounded-lg text-center py-1.5 focus:bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium" />
+                                                <input type="number" value={item.quantity} onChange={e => updateItem(item.id, 'quantity', e.target.valueAsNumber)} className="w-full bg-gray-50/50 dark:bg-gray-900/50 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded-lg text-center py-1.5 focus:bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium" />
                                             </td>
                                             <td className="px-4 py-2.5">
                                                 <select value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} className="w-full bg-transparent hover:bg-gray-50 dark:hover:bg-gray-900/50 border-none rounded-lg text-center p-1.5 text-xs text-gray-500 font-medium focus:ring-0 cursor-pointer outline-none transition-colors">
@@ -501,7 +461,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                                                 </select>
                                             </td>
                                             <td className="px-4 py-2.5">
-                                                <input type="number" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.valueAsNumber)} className="w-full bg-gray-50/50 dark:bg-gray-900/50 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 rounded-lg text-right py-1.5 focus:bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium" />
+                                                <input type="number" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.valueAsNumber)} className="w-full bg-gray-50/50 dark:bg-gray-900/50 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded-lg text-right py-1.5 focus:bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium" />
                                             </td>
                                             <td className="px-4 py-2.5 text-center">
                                                 {items.length > 1 && (
@@ -513,51 +473,53 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                                 </tbody>
                             </table>
                         </div>
-                        <button onClick={addItem} className="w-full py-3 bg-gray-50/50 dark:bg-gray-700/20 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center justify-center border-t border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 transition-colors">
+                        <button onClick={addItem} className="w-full py-3 bg-gray-50/50 dark:bg-gray-700/20 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center justify-center border-t border-gray-300 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 transition-colors">
                             <Plus size={14} className="mr-1" /> ADD NEW ITEM
                         </button>
                     </div>
 
                     {/* Row 3: Totals Section */}
                     <div className="flex justify-end">
-                         <div className="w-full md:w-1/2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm space-y-4">
-                             <div className="flex justify-between text-sm">
-                                 <span className="text-gray-500 dark:text-gray-400 font-medium">Subtotal</span>
-                                 <span className="font-bold text-gray-900 dark:text-white">Rs. {displaySubtotal.toLocaleString()}</span>
+                         <div className="w-full md:w-1/2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden">
+                             <div className="p-6 space-y-4">
+                                 <div className="flex justify-between text-sm">
+                                     <span className="text-gray-500 dark:text-gray-400 font-medium">Subtotal</span>
+                                     <span className="font-bold text-gray-900 dark:text-white">Rs. {displaySubtotal.toLocaleString()}</span>
+                                 </div>
+                             
+                                 <div className="flex items-center justify-between">
+                                     <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
+                                         <Percent size={14} className="mr-1.5 text-indigo-400"/> Discount %
+                                     </div>
+                                     <input type="number" placeholder="0" value={discountPercentage} onChange={e => setDiscountPercentage(e.target.value)} className="w-20 py-1.5 px-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700 text-right text-sm font-semibold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 outline-none transition-all" />
+                                 </div>
+
+                                 {/* --- Payment Method Dropdown --- */}
+                                 <div className="flex items-center justify-between">
+                                     <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
+                                         <Wallet size={14} className="mr-1.5 text-emerald-400"/> Payment
+                                     </div>
+                                     <select 
+                                        value={paymentMethod} 
+                                        onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                                        className="py-1.5 px-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700 text-sm font-semibold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 outline-none w-32 text-right transition-all"
+                                     >
+                                         <option value="Cash">Cash</option>
+                                         <option value="QR">QR / Digital</option>
+                                         <option value="Credit">Credit/Due</option>
+                                         <option value="Card">Bank Card</option>
+                                     </select>
+                                 </div>
+
+                                 {isVatRegistered && (
+                                     <div className="pt-3 border-t border-dashed border-gray-300 dark:border-gray-700 space-y-2.5">
+                                        <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400"><span>Taxable Amount</span><span>Rs. {taxableAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+                                        <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400"><span>VAT (13%)</span><span>Rs. {vatAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+                                     </div>
+                                 )}
                              </div>
                              
-                             <div className="flex items-center justify-between">
-                                 <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
-                                     <Percent size={14} className="mr-1.5 text-indigo-400"/> Discount %
-                                 </div>
-                                 <input type="number" placeholder="0" value={discountPercentage} onChange={e => setDiscountPercentage(e.target.value)} className="w-20 py-1.5 px-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 text-right text-sm font-semibold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 outline-none transition-all" />
-                             </div>
-
-                             {/* --- Payment Method Dropdown --- */}
-                             <div className="flex items-center justify-between">
-                                 <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
-                                     <Wallet size={14} className="mr-1.5 text-emerald-400"/> Payment
-                                 </div>
-                                 <select 
-                                    value={paymentMethod} 
-                                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                                    className="py-1.5 px-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 outline-none w-32 text-right transition-all"
-                                 >
-                                     <option value="Cash">Cash</option>
-                                     <option value="QR">QR / Digital</option>
-                                     <option value="Credit">Credit/Due</option>
-                                     <option value="Card">Bank Card</option>
-                                 </select>
-                             </div>
-
-                             {isVatRegistered && (
-                                 <div className="pt-3 border-t border-dashed border-gray-200 dark:border-gray-700 space-y-2.5">
-                                    <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400"><span>Taxable Amount</span><span>Rs. {taxableAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
-                                    <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400"><span>VAT (13%)</span><span>Rs. {vatAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
-                                 </div>
-                             )}
-                             
-                             <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 -mx-6 -mb-6 p-6 rounded-b-2xl flex-col">
+                             <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-300 dark:border-gray-700 p-6 flex flex-col">
                                  <div className="flex justify-between items-center w-full mb-5">
                                     <span className="font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest text-[11px]">Total Net Amount</span>
                                     <span className="font-bold text-2xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">NPR {total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
@@ -625,7 +587,7 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, bu
             <div className="bg-gray-100 dark:bg-gray-900 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col h-full max-h-[95vh] inv-float-up">
                 
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-white/50 dark:bg-gray-800/50 shrink-0 backdrop-blur-sm z-10">
+                <div className="px-6 py-4 border-b border-gray-300 dark:border-gray-800 flex justify-between items-center bg-white/50 dark:bg-gray-800/50 shrink-0 backdrop-blur-sm z-10">
                     <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <span className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600"><FileText size={18} /></span> Invoice Preview
                     </h3>
@@ -647,7 +609,7 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, bu
                     <div id="invoice-preview-content" className="bg-white text-gray-900 p-8 sm:p-12 w-full max-w-[800px] shadow-2xl rounded-sm print-exact-size min-h-[1100px] flex flex-col relative mx-auto">
                         
                         {/* Elegant Invoice Header */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start mb-10 pb-8 border-b-2 border-gray-100">
+                        <div className="flex flex-col sm:flex-row justify-between items-start mb-10 pb-8 border-b-2 border-gray-300">
                             <div className="max-w-[60%]">
                                  {business.logo ? (
                                     <img src={business.logo} alt="Logo" className="h-16 md:h-20 mb-4 object-contain" />
@@ -669,7 +631,7 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, bu
                         </div>
 
                             {/* Bill To & QR */}
-                        <div className="flex justify-between items-end mb-10 bg-gray-50/50 rounded-2xl p-6 border border-gray-100">
+                        <div className="flex justify-between items-end mb-10 bg-gray-50/50 rounded-2xl p-6 border border-gray-300">
                             <div>
                                 <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Billed To</h3>
                                 <p className="font-bold text-xl text-gray-900">{invoice.partyName}</p>
@@ -681,7 +643,7 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, bu
                             </div>
                             {(business as any).qrCodeUrl && (
                                 <div className="text-center flex flex-col items-center">
-                                    <div className="bg-white p-2 border border-gray-200 rounded-xl shadow-sm mb-2">
+                                    <div className="bg-white p-2 border border-gray-300 rounded-xl shadow-sm mb-2">
                                         <img src={(business as any).qrCodeUrl} alt="Scan to Pay" className="h-[88px] w-[88px] object-cover rounded-md" />
                                     </div>
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Scan to Pay</span>
@@ -690,9 +652,9 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, bu
                         </div>
 
                         {/* Items Table */}
-                        <div className="mb-10 w-full rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="mb-10 w-full rounded-xl border border-gray-300 overflow-hidden">
                             <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 border-b border-gray-200">
+                                <thead className="bg-gray-50 border-b border-gray-300">
                                     <tr>
                                         <th className="py-3.5 px-4 w-[8%] text-center text-gray-500 font-bold uppercase text-[10px] tracking-wider">#</th>
                                         <th className="py-3.5 px-4 w-[42%] text-gray-500 font-bold uppercase text-[10px] tracking-wider">Description</th>
@@ -703,12 +665,12 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, bu
                                 </thead>
                                 <tbody>
                                     {invoice.invoiceDetails?.items.map((item, idx) => (
-                                        <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors">
+                                        <tr key={idx} className="border-b border-gray-300 last:border-0 hover:bg-gray-50/50 transition-colors">
                                             <td className="py-4 px-4 text-center text-gray-400 font-medium text-sm">{idx + 1}</td>
                                             <td className="py-4 px-4 text-gray-800 font-semibold text-sm">{item.description}</td>
                                             <td className="py-4 px-4 text-center text-gray-600 font-medium text-sm">{item.quantity} <span className="text-gray-400 text-xs ml-0.5">{item.unit}</span></td>
                                             <td className="py-4 px-4 text-right text-gray-600 font-medium text-sm">{item.rate.toLocaleString()}</td>
-                                            <td className="py-4 px-4 text-right font-bold text-gray-900 border-l border-gray-50 bg-gray-50/30 text-sm">{(Number(item.quantity) * Number(item.rate)).toLocaleString()}</td>
+                                            <td className="py-4 px-4 text-right font-bold text-gray-900 border-l border-gray-300 bg-gray-50/30 text-sm">{(Number(item.quantity) * Number(item.rate)).toLocaleString()}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -721,7 +683,7 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, bu
                                  {/* Notes or Terms can go here */}
                              </div>
                              
-                             <div className="w-full sm:w-[300px] shrink-0 bg-gray-50/80 rounded-2xl p-6 border border-gray-100 ml-auto">
+                             <div className="w-full sm:w-[300px] shrink-0 bg-gray-50/80 rounded-2xl p-6 border border-gray-300 ml-auto">
                                 <div className="space-y-3.5 mb-5 relative">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500 font-medium">Subtotal</span>
@@ -744,18 +706,18 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewProps> = ({ invoice, bu
                                 
                                 <div className="flex justify-between items-center text-lg font-bold text-gray-900">
                                     <span className="uppercase text-xs font-bold tracking-widest text-gray-400">Total</span>
-                                    <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">NPR {invoice.amount.toLocaleString()}</span>
+                                    <span className="text-2xl font-black" style={{ color: '#4f46e5' }}>NPR {invoice.amount.toLocaleString()}</span>
                                 </div>
 
-                                <div className="flex justify-between items-center text-[10px] text-gray-500 pt-6 mt-6 border-t border-gray-200">
+                                <div className="flex justify-between items-center text-[10px] text-gray-500 pt-6 mt-6 border-t border-gray-300">
                                     <span className="font-bold uppercase tracking-widest">Payment Mode</span>
-                                    <span className="font-bold text-gray-800 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100 uppercase tracking-widest">{(invoice.invoiceDetails as any)?.paymentMethod || 'Cash'}</span>
+                                    <span className="font-bold text-gray-800 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-300 uppercase tracking-widest">{(invoice.invoiceDetails as any)?.paymentMethod || 'Cash'}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Footer */}
-                        <div className="mt-8 text-center pt-8 border-t border-gray-100 absolute bottom-12 left-12 right-12 flex justify-between items-center">
+                        <div className="mt-8 text-center pt-8 border-t border-gray-300 absolute bottom-12 left-12 right-12 flex justify-between items-center">
                             <p className="text-gray-800 font-bold text-sm tracking-wide">Thank you for doing business with us.</p>
                             <p className="text-gray-400 font-semibold text-xs flex items-center justify-center gap-1">Generated by <span className="text-blue-500 font-bold underline decoration-wavy decoration-blue-200">Dainikhisab</span></p>
                         </div>

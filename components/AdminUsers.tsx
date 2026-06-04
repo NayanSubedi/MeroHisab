@@ -168,9 +168,9 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
           </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Admin Details</th>
@@ -179,7 +179,7 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
                         <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-300 dark:divide-gray-700">
                     {filteredUsers.length > 0 ? (
                         filteredUsers.map((user) => (
                             <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
@@ -250,7 +250,7 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
                 </tbody>
             </table>
         </div>
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-300 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
             <span>Showing {filteredUsers.length} admins</span>
             <span>Sorted by newest</span>
         </div>
@@ -260,7 +260,7 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center p-5 border-b border-gray-300 dark:border-gray-700">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
                 <Key className="mr-2" size={20} />
                 Reset Password

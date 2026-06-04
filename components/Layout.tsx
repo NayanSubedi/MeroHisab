@@ -243,7 +243,7 @@ const Layout: React.FC<LayoutProps> = ({
         </main>
 
         {/* FIXED BOTTOM NAV — Mobile Only */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-700/50 pb-[env(safe-area-inset-bottom)] z-40">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-t border-gray-300/50 dark:border-gray-700/50 pb-[env(safe-area-inset-bottom)] z-40">
           <div className="flex justify-around items-end h-16 px-2">
             {bottomNavItems.map((item) => {
               const Icon = item.icon;
@@ -356,7 +356,7 @@ const Layout: React.FC<LayoutProps> = ({
                 })}
 
                 {/* Divider */}
-                <div className="border-t border-gray-100 dark:border-gray-800 my-2" />
+                <div className="border-t border-gray-300 dark:border-gray-800 my-2" />
 
                 {/* Theme Toggle */}
                 <button

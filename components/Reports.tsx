@@ -257,7 +257,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
       {/* ═══════════════ KPI CARDS ═══════════════ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Revenue */}
-        <div className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 group hover:shadow-md transition-shadow">
+        <div className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-300 dark:border-gray-700 group hover:shadow-md transition-shadow">
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full -mr-6 -mt-6" />
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
@@ -270,7 +270,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
         </div>
 
         {/* Expenses */}
-        <div className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 group hover:shadow-md transition-shadow">
+        <div className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-300 dark:border-gray-700 group hover:shadow-md transition-shadow">
           <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/5 rounded-full -mr-6 -mt-6" />
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-red-100 dark:bg-red-900/30 rounded-lg">
@@ -283,7 +283,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
         </div>
 
         {/* Net Profit */}
-        <div className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 group hover:shadow-md transition-shadow">
+        <div className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-300 dark:border-gray-700 group hover:shadow-md transition-shadow">
           <div className={`absolute top-0 right-0 w-20 h-20 rounded-full -mr-6 -mt-6 ${netProfit >= 0 ? 'bg-blue-500/5' : 'bg-orange-500/5'}`} />
           <div className="flex items-center gap-2 mb-2">
             <div className={`p-1.5 rounded-lg ${netProfit >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-orange-100 dark:bg-orange-900/30'}`}>
@@ -298,7 +298,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
         </div>
 
         {/* Margin */}
-        <div className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 group hover:shadow-md transition-shadow">
+        <div className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-300 dark:border-gray-700 group hover:shadow-md transition-shadow">
           <div className={`absolute top-0 right-0 w-20 h-20 rounded-full -mr-6 -mt-6 ${profitMargin >= 0 ? 'bg-purple-500/5' : 'bg-red-500/5'}`} />
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -314,7 +314,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
       </div>
 
       {/* ═══════════════ FINANCIAL SUMMARY ═══════════════ */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 overflow-hidden">
         <div className="px-5 pt-5 pb-3">
           <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
             <DollarSign size={16} className="text-indigo-500" />
@@ -324,7 +324,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
 
         <div className="px-5 pb-5 space-y-1">
           {/* Revenue */}
-          <div className="flex justify-between items-center py-2.5 border-b border-gray-50 dark:border-gray-700/60">
+          <div className="flex justify-between items-center py-2.5 border-b border-gray-300 dark:border-gray-700/60">
             <span className="text-sm text-gray-500 dark:text-gray-400">Sales Revenue</span>
             <span className="text-sm font-bold text-emerald-600">+{fmt(totalRevenue)}</span>
           </div>
@@ -349,7 +349,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
           ))}
 
           {expenseByCategory.length > 5 && (
-            <div className="flex justify-between items-center py-2 border-b border-gray-50 dark:border-gray-700/60">
+            <div className="flex justify-between items-center py-2 border-b border-gray-300 dark:border-gray-700/60">
               <span className="text-xs text-gray-400 italic">
                 +{expenseByCategory.length - 5} more categories
               </span>
@@ -360,7 +360,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
           )}
 
           {/* Total Expenses */}
-          <div className="flex justify-between items-center py-2.5 border-b border-gray-200 dark:border-gray-600">
+          <div className="flex justify-between items-center py-2.5 border-b border-gray-300 dark:border-gray-600">
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Total Expenses</span>
             <span className="text-sm font-bold text-red-500">-{fmt(totalExpenses)}</span>
           </div>
@@ -401,7 +401,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Income vs Expense Area Chart */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 p-4">
           <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
             <TrendingUp size={15} className="text-indigo-500" />
             Revenue vs Expenses
@@ -442,7 +442,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
         </div>
 
         {/* Expense Breakdown Donut + Legend */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 p-4">
           <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
             <PieChartIcon size={15} className="text-purple-500" />
             Expense Breakdown
@@ -490,7 +490,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
 
       {/* Net Profit Trend Line */}
       {monthlyTrendData.length > 1 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 p-4">
           <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
             <Activity size={15} className="text-blue-500" />
             Monthly Net Profit Trend
@@ -578,7 +578,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
 
               {/* Forecast Table */}
               <div className="bg-white/70 dark:bg-gray-900/40 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-2 border-b border-gray-200/50 dark:border-gray-700/50">
+                <div className="grid grid-cols-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-2 border-b border-gray-300/50 dark:border-gray-700/50">
                   <span>Period</span>
                   <span className="text-right">Revenue</span>
                   <span className="text-right">Expense</span>
@@ -587,7 +587,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
                 {forecastData.future.map((f, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-4 px-4 py-2.5 text-xs border-b border-gray-100/50 dark:border-gray-700/30 last:border-0 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors"
+                    className="grid grid-cols-4 px-4 py-2.5 text-xs border-b border-gray-300/60 dark:border-gray-700/30 last:border-0 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors"
                   >
                     <span className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />

@@ -52,7 +52,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
         <button 
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="p-2.5 bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition active:scale-95 disabled:opacity-50"
+          className="p-2.5 bg-white dark:bg-gray-800 shadow-sm border border-gray-300 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition active:scale-95 disabled:opacity-50"
         >
           <RefreshCw size={18} className={`text-blue-600 dark:text-blue-400 ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>
@@ -97,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
       <div className="grid grid-cols-2 gap-3">
         <button 
           onClick={() => onQuickAction('upload')} 
-          className="group flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 active:scale-[0.97] transition-all hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800"
+          className="group flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 active:scale-[0.97] transition-all hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800"
         >
           <div className="p-3.5 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20 text-blue-600 dark:text-blue-400 rounded-2xl mb-2.5 group-hover:scale-105 transition-transform">
             <Camera size={24} />
@@ -108,7 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
 
         <button 
           onClick={() => onQuickAction('invoice')} 
-          className="group flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 active:scale-[0.97] transition-all hover:shadow-md hover:border-purple-200 dark:hover:border-purple-800"
+          className="group flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 active:scale-[0.97] transition-all hover:shadow-md hover:border-purple-200 dark:hover:border-purple-800"
         >
           <div className="p-3.5 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/30 dark:to-purple-800/20 text-purple-600 dark:text-purple-400 rounded-2xl mb-2.5 group-hover:scale-105 transition-transform">
             <FileText size={24} />
@@ -120,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
 
       {/* Recent Transactions */}
       {recentTransactions.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 overflow-hidden">
           <div className="flex justify-between items-center px-4 pt-4 pb-2">
             <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
               <Activity size={15} className="text-blue-500" />
@@ -139,7 +139,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
               <div
                 key={t.id}
                 onClick={() => setSelectedTransaction(t)}
-                className="flex items-center justify-between py-2.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 -mx-1 px-1 rounded-lg transition-colors"
+                className="flex items-center justify-between py-2.5 border-b border-gray-300 dark:border-gray-700/50 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 -mx-1 px-1 rounded-lg transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
@@ -206,7 +206,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
                 <p className="text-xs text-gray-400 mt-1">{selectedTransaction.category}</p>
               </div>
 
-              <div className="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-300 dark:border-gray-700">
                 <div className="flex justify-between">
                   <span className="text-xs text-gray-400">Date</span>
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{selectedTransaction.date.split('T')[0]}</span>
@@ -230,7 +230,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, onQuickAction, onRe
               {selectedTransaction.imageUrl && (
                 <div className="mt-4">
                   <p className="text-xs font-semibold text-gray-500 mb-2">Receipt Image</p>
-                  <img src={selectedTransaction.imageUrl} alt="Receipt" className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-700" />
+                  <img src={selectedTransaction.imageUrl} alt="Receipt" className="w-full h-48 object-cover rounded-xl border border-gray-300 dark:border-gray-700" />
                 </div>
               )}
             </div>

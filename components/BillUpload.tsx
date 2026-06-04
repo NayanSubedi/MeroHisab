@@ -313,7 +313,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
             <style>{billStyles}</style>
 
             {/* --- Stepper Header --- */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
                 <div className="px-6 pt-5 pb-4 flex justify-between items-center">
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -390,7 +390,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto">
                                     <button
                                         onClick={handleTakePhoto}
-                                        className="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-700/80 border-2 border-gray-100 dark:border-gray-600 rounded-2xl hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 active:scale-95 group"
+                                        className="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-700/80 border-2 border-gray-300 dark:border-gray-600 rounded-2xl hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 active:scale-95 group"
                                     >
                                         <div className="p-3.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl mb-3 shadow-md group-hover:shadow-lg group-hover:shadow-blue-500/30 transition-all">
                                             <Camera size={22} />
@@ -401,7 +401,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
 
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-700/80 border-2 border-gray-100 dark:border-gray-600 rounded-2xl hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 active:scale-95 group"
+                                        className="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-700/80 border-2 border-gray-300 dark:border-gray-600 rounded-2xl hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 active:scale-95 group"
                                     >
                                         <div className="p-3.5 bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl mb-3 shadow-md group-hover:shadow-lg group-hover:shadow-purple-500/30 transition-all">
                                             <UploadCloud size={22} />
@@ -464,7 +464,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Image Preview */}
                             <div className="space-y-3">
-                                <div className="relative rounded-2xl overflow-hidden border-2 border-gray-100 dark:border-gray-700 bg-black group">
+                                <div className="relative rounded-2xl overflow-hidden border-2 border-gray-300 dark:border-gray-700 bg-black group">
                                     <img src={imagePreview} alt="Receipt Preview" className="w-full h-auto object-contain max-h-96" />
                                 </div>
                                 <button onClick={() => { setImagePreview(null); setStep(1); }} className="flex items-center justify-center w-full py-2.5 text-sm text-red-500 hover:text-red-600 font-medium border border-red-200 dark:border-red-900/50 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-[0.98]">
@@ -475,40 +475,40 @@ const BillUpload: React.FC<BillUploadProps> = ({
                             {/* Form */}
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 {/* Vendor Card */}
-                                <div className="p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-3">
+                                <div className="p-4 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-3">
                                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5"><Building2 size={12} /> Vendor Info</p>
                                     <div>
                                         <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendor Name *</label>
-                                        <input required type="text" value={vendorName} onChange={e => setVendorName(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" placeholder="e.g. Himalayan Mart" />
+                                        <input required type="text" value={vendorName} onChange={e => setVendorName(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" placeholder="e.g. Himalayan Mart" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1"><Hash size={10} /> Bill No.</label>
-                                            <input type="text" value={billNumber} onChange={e => setBillNumber(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                            <input type="text" value={billNumber} onChange={e => setBillNumber(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1"><Shield size={10} /> PAN (9 digits)</label>
-                                            <input type="text" maxLength={9} value={vendorPan} onChange={e => setVendorPan(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                            <input type="text" maxLength={9} value={vendorPan} onChange={e => setVendorPan(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Financials Card */}
-                                <div className="p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-3">
+                                <div className="p-4 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-3">
                                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5"><CreditCard size={12} /> Financials</p>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount (NPR) *</label>
-                                            <input required type="number" value={amount} onChange={e => setAmount(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-semibold" />
+                                            <input required type="number" value={amount} onChange={e => setAmount(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-semibold" />
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> Date</label>
-                                            <input required type="text" placeholder="e.g. 11/11/2082" value={date} onChange={e => setDate(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                            <input required type="text" placeholder="e.g. 11/11/2082" value={date} onChange={e => setDate(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                                         </div>
                                     </div>
                                     <div>
                                         <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1"><Tag size={10} /> Category</label>
-                                        <select value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                                        <select value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                                             {Object.values(ExpenseCategory).map(cat => (
                                                 <option key={cat} value={cat}>{cat}</option>
                                             ))}
@@ -526,8 +526,8 @@ const BillUpload: React.FC<BillUploadProps> = ({
             </div>
 
             {/* --- History Section --- */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
+                <div className="p-5 border-b border-gray-300 dark:border-gray-700">
                     <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                             <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700"><History size={16} className="text-gray-500 dark:text-gray-400" /></div>
@@ -538,10 +538,10 @@ const BillUpload: React.FC<BillUploadProps> = ({
                             {/* Search */}
                             <div className="relative">
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search vendor, bill..." className="pl-9 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm w-full sm:w-48 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search vendor, bill..." className="pl-9 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm w-full sm:w-48 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                             </div>
                             {/* Date Filter */}
-                            <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700 p-1.5 rounded-xl border border-gray-200 dark:border-gray-600">
+                            <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700 p-1.5 rounded-xl border border-gray-300 dark:border-gray-600">
                                 <select
                                     value={historyDate === 'all' ? 'all' : 'custom'}
                                     onChange={(e) => { if (e.target.value === 'all') setHistoryDate('all'); else setHistoryDate(new Date().toISOString().split('T')[0]); }}
@@ -559,7 +559,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                 </div>
 
                 {/* Mobile: Card List */}
-                <div className="md:hidden divide-y divide-gray-50 dark:divide-gray-700/50">
+                <div className="md:hidden divide-y divide-gray-300 dark:divide-gray-700/50">
                     {historyData.length > 0 ? historyData.map((t, index) => {
                         const missing = getMissingFields(t);
                         return (
@@ -567,7 +567,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                 {/* Thumbnail or number */}
                                 <div className="shrink-0">
                                     {t.imageUrl ? (
-                                        <img src={t.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
+                                        <img src={t.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-300 dark:border-gray-600" />
                                     ) : (
                                         <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg text-xs font-bold text-gray-400">{index+1}</div>
                                     )}
@@ -605,7 +605,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                 <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full">
                         <thead>
-                            <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                            <tr className="border-b border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
                                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">SN</th>
                                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Upload Date</th>
                                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendor</th>
@@ -615,7 +615,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                 <th className="px-5 py-3 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                        <tbody className="divide-y divide-gray-300 dark:divide-gray-700/50">
                             {historyData.length > 0 ? (
                                 historyData.map((t, index) => {
                                     const missing = getMissingFields(t);
@@ -625,7 +625,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                             <td className="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">{(t.createdAt || t.date).split('T')[0]}</td>
                                             <td className="px-5 py-3.5">
                                                 <div className="flex items-center gap-2.5">
-                                                    {t.imageUrl && <img src={t.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />}
+                                                    {t.imageUrl && <img src={t.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-300 dark:border-gray-600" />}
                                                     <div>
                                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">{t.partyName}</p>
                                                         <p className="text-[11px] text-gray-400">{t.billNumber || 'No Ref'}</p>
@@ -672,7 +672,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh] bill-float-up" onClick={e => e.stopPropagation()}>
 
                         {/* Modal Header */}
-                        <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+                        <div className="flex justify-between items-center p-5 border-b border-gray-300 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                                     {isEditing ? 'Edit Transaction' : 'Bill Details'}
@@ -691,29 +691,29 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                     <div className="space-y-4">
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendor Name</label>
-                                            <input type="text" value={editForm.partyName || ''} onChange={e => setEditForm({ ...editForm, partyName: e.target.value })} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                            <input type="text" value={editForm.partyName || ''} onChange={e => setEditForm({ ...editForm, partyName: e.target.value })} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bill Number</label>
-                                            <input type="text" value={editForm.billNumber || ''} onChange={e => setEditForm({ ...editForm, billNumber: e.target.value })} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                            <input type="text" value={editForm.billNumber || ''} onChange={e => setEditForm({ ...editForm, billNumber: e.target.value })} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendor PAN</label>
-                                            <input type="text" maxLength={9} value={editForm.partyPan || ''} onChange={e => setEditForm({ ...editForm, partyPan: e.target.value })} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                            <input type="text" maxLength={9} value={editForm.partyPan || ''} onChange={e => setEditForm({ ...editForm, partyPan: e.target.value })} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                                         </div>
                                     </div>
                                     <div className="space-y-4">
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount (NPR)</label>
-                                            <input type="number" value={editForm.amount || ''} onChange={e => setEditForm({ ...editForm, amount: parseFloat(e.target.value) || 0 })} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-semibold" />
+                                            <input type="number" value={editForm.amount || ''} onChange={e => setEditForm({ ...editForm, amount: parseFloat(e.target.value) || 0 })} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-semibold" />
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</label>
-                                            <input type="text" placeholder="e.g. 11/11/2082" value={editForm.date || ''} onChange={e => setEditForm({ ...editForm, date: e.target.value })} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                            <input type="text" placeholder="e.g. 11/11/2082" value={editForm.date || ''} onChange={e => setEditForm({ ...editForm, date: e.target.value })} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</label>
-                                            <select value={editForm.category || ''} onChange={e => setEditForm({ ...editForm, category: e.target.value as ExpenseCategory })} className="mt-1 block w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                                            <select value={editForm.category || ''} onChange={e => setEditForm({ ...editForm, category: e.target.value as ExpenseCategory })} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                                                 {Object.values(ExpenseCategory).map(cat => (
                                                     <option key={cat} value={cat}>{cat}</option>
                                                 ))}
@@ -758,7 +758,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                     </div>
                                     <div className="flex flex-col">
                                         <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5"><ImageIcon size={14} /> Bill Image</label>
-                                        <div className="flex-1 bg-gray-100 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden min-h-[200px]">
+                                        <div className="flex-1 bg-gray-100 dark:bg-gray-900 rounded-2xl border border-gray-300 dark:border-gray-700 flex items-center justify-center overflow-hidden min-h-[200px]">
                                             {selectedBill.imageUrl ? (
                                                 <img src={selectedBill.imageUrl} alt="Bill Receipt" className="w-full h-full object-contain cursor-pointer hover:scale-105 transition-transform duration-300" onClick={() => window.open(selectedBill.imageUrl, '_blank')} title="Click to open full size" />
                                             ) : (
@@ -775,12 +775,12 @@ const BillUpload: React.FC<BillUploadProps> = ({
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex justify-end items-center gap-3">
+                        <div className="p-4 border-t border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex justify-end items-center gap-3">
                             {!isEditing ? (
                                 <button onClick={() => setSelectedBill(null)} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-600/20 active:scale-[0.98]">Close</button>
                             ) : (
                                 <>
-                                    <button onClick={() => setIsEditing(false)} className="px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all">Cancel</button>
+                                    <button onClick={() => setIsEditing(false)} className="px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all">Cancel</button>
                                     <button onClick={handleSaveEdit} className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-sm font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md shadow-green-600/20 active:scale-[0.98] flex items-center gap-1.5"><Check size={16} /> Save</button>
                                 </>
                             )}
@@ -817,9 +817,9 @@ const BillUpload: React.FC<BillUploadProps> = ({
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirm Delete</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{confirmDialog.message}</p>
                         </div>
-                        <div className="flex border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex border-t border-gray-300 dark:border-gray-700">
                             <button onClick={() => setConfirmDialog(null)} className="flex-1 py-3.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancel</button>
-                            <button onClick={confirmDialog.onConfirm} className="flex-1 py-3.5 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border-l border-gray-200 dark:border-gray-700">Delete</button>
+                            <button onClick={confirmDialog.onConfirm} className="flex-1 py-3.5 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border-l border-gray-300 dark:border-gray-700">Delete</button>
                         </div>
                     </div>
                 </div>

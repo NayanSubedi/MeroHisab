@@ -40,6 +40,7 @@ const App: React.FC = () => {
     setTransactions([]);
     setStaffList([]);
     setCurrentView('dashboard'); // Reset view for next login
+    Preferences.remove({ key: 'lastView' });
   }, []);
 
   // --- GLOBAL AUTH EXPIRATION LISTENER ---
@@ -96,7 +97,10 @@ const App: React.FC = () => {
           setToken(storedToken);
           setIsAuthenticated(true);
 
-          if (parsedProfile.role === UserRole.ADMIN) {
+          const { value: storedView } = await Preferences.get({ key: 'lastView' });
+          if (storedView) {
+            setCurrentView(storedView);
+          } else if (parsedProfile.role === UserRole.ADMIN) {
             setCurrentView('admin_dashboard');
           } else if (parsedProfile.role === UserRole.STAFF) {
             setCurrentView('upload');
@@ -123,15 +127,25 @@ const App: React.FC = () => {
   }, [fetchTransactions, fetchStaff, handleLogout]);
 
   // --- EVENT HANDLERS ---
+  const handleSetView = useCallback((view: string) => {
+    setCurrentView(view);
+    Preferences.set({ key: 'lastView', value: view });
+  }, []);
+
   const handleLogin = (profile: BusinessProfile, authToken: string) => {
     setUserProfile(profile);
     setToken(authToken);
     setIsAuthenticated(true);
 
+    let defaultView = 'dashboard';
     if (profile.role === UserRole.ADMIN) {
-      setCurrentView('admin_dashboard');
-    } else {
-      setCurrentView(profile.role === UserRole.STAFF ? 'upload' : 'dashboard');
+      defaultView = 'admin_dashboard';
+    } else if (profile.role === UserRole.STAFF) {
+      defaultView = 'upload';
+    }
+    handleSetView(defaultView);
+
+    if (profile.role !== UserRole.ADMIN) {
       fetchTransactions(authToken);
       if (profile.role === UserRole.OWNER) fetchStaff(authToken);
     }
@@ -203,9 +217,9 @@ const App: React.FC = () => {
       case 'dashboard':
         return userProfile.role === UserRole.STAFF
           ? <BillUpload onAddTransaction={addTransaction} onCancel={() => { }} transactions={transactions} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onReload={() => fetchTransactions(token)} />
-          : <Dashboard transactions={transactions} onQuickAction={setCurrentView} onRefresh={handleManualRefresh} />;
+          : <Dashboard transactions={transactions} onQuickAction={handleSetView} onRefresh={handleManualRefresh} />;
       case 'upload':
-        return <BillUpload onAddTransaction={addTransaction} onCancel={() => setCurrentView(userProfile.role === UserRole.STAFF ? 'invoice' : 'dashboard')} transactions={transactions} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onReload={() => fetchTransactions(token)} />;
+        return <BillUpload onAddTransaction={addTransaction} onCancel={() => handleSetView(userProfile.role === UserRole.STAFF ? 'invoice' : 'dashboard')} transactions={transactions} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onReload={() => fetchTransactions(token)} />;
       case 'invoice':
         return <InvoiceGenerator businessProfile={userProfile} onSaveInvoice={addTransaction} transactions={transactions} />;
       case 'daily':
@@ -214,25 +228,23 @@ const App: React.FC = () => {
         return userProfile.role === UserRole.STAFF
           ? <InvoiceGenerator businessProfile={userProfile} onSaveInvoice={addTransaction} transactions={transactions} />
           : <Reports transactions={transactions} />;
-      // case 'predictions':
-      //   return <PredictiveAnalysis transactions={transactions} />;
       case 'users':
         return userProfile.role !== UserRole.OWNER
-          ? <Dashboard transactions={transactions} onQuickAction={setCurrentView} onRefresh={handleManualRefresh} />
+          ? <Dashboard transactions={transactions} onQuickAction={handleSetView} onRefresh={handleManualRefresh} />
           : <UserManagement staffList={staffList} onAddStaff={handleAddStaff} onRemoveStaff={handleRemoveStaff} />;
       case 'profile':
         return userProfile.role !== UserRole.OWNER
-          ? <Dashboard transactions={transactions} onQuickAction={setCurrentView} onRefresh={handleManualRefresh} />
+          ? <Dashboard transactions={transactions} onQuickAction={handleSetView} onRefresh={handleManualRefresh} />
           : <ProfileSettings userProfile={userProfile} token={token} onUpdate={handleProfileUpdate} />;
       default:
         return userProfile.role === UserRole.STAFF
           ? <BillUpload onAddTransaction={addTransaction} onCancel={() => { }} transactions={transactions} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onReload={() => fetchTransactions(token)} />
-          : <Dashboard transactions={transactions} onQuickAction={setCurrentView} onRefresh={handleManualRefresh} />;
+          : <Dashboard transactions={transactions} onQuickAction={handleSetView} onRefresh={handleManualRefresh} />;
     }
   };
 
   return (
-    <Layout currentView={currentView} setView={setCurrentView} userProfile={userProfile} logout={handleLogout}>
+    <Layout currentView={currentView} setView={handleSetView} userProfile={userProfile} logout={handleLogout}>
       {renderView()}
     </Layout>
   );

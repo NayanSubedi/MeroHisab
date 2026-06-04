@@ -79,7 +79,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
     }
   };
 
-  const inputClass = "w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500";
+  const inputClass = "w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500";
   const labelClass = "block text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider";
 
   return (
@@ -117,11 +117,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
         <div className="md:col-span-1 space-y-4">
 
           {/* Logo Card */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Business Logo</h3>
             <div className="flex flex-col items-center">
               <div className="relative group mb-3">
-                <div className="w-28 h-28 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-700 flex items-center justify-center transition-colors group-hover:border-blue-400">
+                <div className="w-28 h-28 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-700 flex items-center justify-center transition-colors group-hover:border-blue-400">
                   {logo ? (
                     <img src={logo} alt="Logo" className="w-full h-full object-cover" />
                   ) : (
@@ -142,7 +142,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
           </div>
 
           {/* Security */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-4">
               <div className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg">
                 <Lock size={14} className="text-red-500" />
@@ -163,7 +163,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
 
 
           {/* Tax Info (read-only) */}
-          <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-300 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-3">
               <Shield size={14} className="text-gray-400" />
               <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tax Registration</h3>
@@ -191,8 +191,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
         <div className="md:col-span-2 space-y-4">
 
           {/* General Info */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-300 dark:border-gray-700">
               <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <User size={14} className="text-blue-500" />
               </div>
@@ -215,8 +215,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
           </div>
 
           {/* Address */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-300 dark:border-gray-700">
               <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
                 <MapPin size={14} className="text-emerald-500" />
               </div>

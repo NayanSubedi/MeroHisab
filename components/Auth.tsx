@@ -113,7 +113,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
   };
 
-  const inputClass = "w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-white px-4 py-3.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500 font-medium";
+  const inputClass = "w-full rounded-2xl border border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-white px-4 py-3.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500 font-medium";
   const labelClass = "block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider ml-1";
 
   return (
@@ -230,14 +230,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   </div>
                   <div>
                     <label className={labelClass}>PAN/VAT Number *</label>
-                    <input required type="text" maxLength={9} value={pan} onChange={e => setPan(e.target.value)} placeholder="9-digit PAN" className={inputClass} />
+                    <input required type="text" maxLength={9} minLength={9} value={pan} onChange={e => { const val = e.target.value; if (val === '' || /^\d{0,9}$/.test(val)) setPan(val); }} placeholder="9-digit PAN" className={inputClass} />
                   </div>
                   <div className="md:col-span-2 relative group mt-2">
                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 ml-1 cursor-pointer">Registration Certificate *</label>
                     <div className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 ${
                       panPhoto 
                       ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20' 
-                      : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 bg-gray-50 dark:bg-gray-800/50'
+                      : 'border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 bg-gray-50 dark:bg-gray-800/50'
                     }`}>
                       <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                       {panPhoto ? (
@@ -306,8 +306,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     <label className={labelClass}>Address Line 1 *</label>
                     <input required type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className={inputClass} placeholder="Street, Tole, Ward No." />
                   </div>
+                  <div className="md:col-span-2">
+                    <label className={labelClass}>Address Line 2 (Optional)</label>
+                    <input type="text" value={addressLine2} onChange={e => setAddressLine2(e.target.value)} className={inputClass} placeholder="Building, Landmark" />
+                  </div>
                   <div>
-                    <label className={labelClass}>City/VDC *</label>
+                    <label className={labelClass}>City*</label>
                     <input required type="text" value={city} onChange={e => setCity(e.target.value)} className={inputClass} />
                   </div>
                   <div>
@@ -319,6 +323,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                       <option value="Lumbini">Lumbini</option><option value="Karnali">Karnali</option>
                       <option value="Sudurpaschim">Sudurpaschim</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Country *</label>
+                    <input required type="text" value={country} onChange={e => setCountry(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Zip Code *</label>
+                    <input required type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} className={inputClass} />
                   </div>
                 </div>
               </div>
@@ -373,7 +385,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 {!loading && <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
               </button>
 
-              <div className="text-center mt-12 pt-6 border-t border-gray-100 dark:border-gray-800">
+              <div className="text-center mt-12 pt-6 border-t border-gray-300 dark:border-gray-800">
                 <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
                   Don't have an account?{' '}
                   <button type="button" onClick={() => { setIsRegister(true); setError(null); }} className="text-blue-600 dark:text-blue-400 font-bold hover:underline transition-all">Register Business</button>

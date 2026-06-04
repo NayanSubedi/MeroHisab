@@ -122,7 +122,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
     <div className="space-y-4 h-full flex flex-col pb-20 md:pb-0">
 
       {/* ═══════ HEADER ═══════ */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 overflow-hidden">
         {/* Top bar */}
         <div className="px-4 pt-4 pb-3 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
         {/* Date picker */}
         {!showAll && (
           <div className="px-4 pb-3">
-            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 rounded-xl p-2.5 border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 rounded-xl p-2.5 border border-gray-300 dark:border-gray-700">
               <Calendar size={16} className="text-gray-400 ml-1" />
               <input 
                 type="date" 
@@ -176,15 +176,15 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
         )}
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 border-t border-gray-100 dark:border-gray-700">
-          <div className="p-3 text-center border-r border-gray-100 dark:border-gray-700">
+        <div className="grid grid-cols-3 border-t border-gray-300 dark:border-gray-700">
+          <div className="p-3 text-center border-r border-gray-300 dark:border-gray-700">
             <div className="flex items-center justify-center gap-1 mb-0.5">
               <ArrowUpRight size={10} className="text-emerald-500" />
               <span className="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase font-bold tracking-wider">Income</span>
             </div>
             <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">{fmtShort(totalSales)}</span>
           </div>
-          <div className="p-3 text-center border-r border-gray-100 dark:border-gray-700">
+          <div className="p-3 text-center border-r border-gray-300 dark:border-gray-700">
             <div className="flex items-center justify-center gap-1 mb-0.5">
               <ArrowDownRight size={10} className="text-red-500" />
               <span className="text-[9px] text-red-500 uppercase font-bold tracking-wider">Expense</span>
@@ -209,7 +209,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
             {/* Mobile Card View */}
             <div className="md:hidden space-y-2">
               {currentItems.map((t) => (
-                <div key={t.id} className="bg-white dark:bg-gray-800 p-3.5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-3 active:scale-[0.99] transition-transform">
+                <div key={t.id} className="bg-white dark:bg-gray-800 p-3.5 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 flex items-center gap-3 active:scale-[0.99] transition-transform">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                     t.type === TransactionType.SALES 
                       ? 'bg-emerald-50 dark:bg-emerald-900/20' 
@@ -254,8 +254,8 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm">
-              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-700 overflow-hidden shadow-sm">
+              <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead>
                   <tr className="bg-gray-50/80 dark:bg-gray-900/50">
                     <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Date</th>
@@ -265,7 +265,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
                     <th className="px-5 py-3 text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                <tbody className="divide-y divide-gray-300 dark:divide-gray-700/50">
                   {currentItems.map((t) => (
                     <tr key={t.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
                       <td className="px-5 py-3.5 whitespace-nowrap text-xs text-gray-400 font-medium">
@@ -317,7 +317,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-gray-50/80 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-600">
+                <tfoot className="bg-gray-50/80 dark:bg-gray-900/50 border-t border-gray-300 dark:border-gray-600">
                   <tr>
                     <td colSpan={3} className="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase">
                       Total ({showAll ? 'All' : 'Daily'})
@@ -348,7 +348,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
 
       {/* ═══════ PAGINATION ═══════ */}
       {displayedTransactions.length > itemsPerPage && (
-        <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-sm">
           <button 
             onClick={handlePrevPage}
             disabled={currentPage === 1}
@@ -407,7 +407,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
       ) : selectedTransaction ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setSelectedTransaction(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-300 dark:border-gray-700">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-500"><FileText size={16} /></div> Transaction Record
               </h3>
@@ -419,7 +419,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
             <div className="p-5 md:p-6 overflow-y-auto space-y-5">
               <div className="flex flex-col md:flex-row gap-5 items-start">
                   <div className="flex-1 w-full space-y-3">
-                      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50 space-y-3">
+                      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-300 dark:border-gray-700/50 space-y-3">
                           <div className="flex justify-between items-center">
                               <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Amount</span>
                               <span className={`text-lg font-extrabold ${selectedTransaction.type === TransactionType.SALES ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -442,7 +442,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
                           </div>
                       </div>
                       
-                      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50 space-y-3">
+                      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-300 dark:border-gray-700/50 space-y-3">
                           <div className="flex justify-between items-center">
                               <span className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Party</span>
                               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{selectedTransaction.partyName || 'N/A'}</span>
@@ -462,7 +462,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
                       </div>
                   </div>
 
-                  <div className="w-full md:w-[200px] shrink-0 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 h-[280px] flex items-center justify-center overflow-hidden flex-col">
+                  <div className="w-full md:w-[200px] shrink-0 border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 h-[280px] flex items-center justify-center overflow-hidden flex-col">
                       {selectedTransaction.imageUrl ? (
                           <img src={selectedTransaction.imageUrl} alt="Receipt" className="w-full h-full object-contain cursor-pointer hover:scale-105 transition-transform" title="Click to open" onClick={() => window.open(selectedTransaction.imageUrl, '_blank')} />
                       ) : (

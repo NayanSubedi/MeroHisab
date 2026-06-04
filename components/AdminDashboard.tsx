@@ -119,7 +119,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
   const pendingBusinesses = filteredBusinesses.filter(b => !b.isVerified);
   const verifiedBusinesses = filteredBusinesses.filter(b => b.isVerified);
 
-  const inputClass = "w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all";
+  const inputClass = "w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all";
 
   return (
     <div className="space-y-5 text-gray-900 dark:text-gray-100 pb-6">
@@ -131,7 +131,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
         <div className="fixed inset-0 z-[70] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setVerifyingBusiness(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-3xl md:rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="md:hidden flex justify-center pt-3"><div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" /></div>
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="p-6 border-b border-gray-300 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <ShieldCheck size={20} className="text-blue-500" /> Review Registration
@@ -165,7 +165,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                     <label className="block text-xs font-semibold text-gray-500 mb-1.5">Reason for Rejection *</label>
                     <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
                       placeholder="e.g., Blur PAN photo, Mismatched details..."
-                      className="w-full h-28 p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500/30 outline-none resize-none" />
+                      className="w-full h-28 p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500/30 outline-none resize-none" />
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => setShowRejectInput(false)}
@@ -188,7 +188,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
       {selectedCertificate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4" onClick={() => setSelectedCertificate(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex justify-between items-center p-4 border-b border-gray-300 dark:border-gray-700">
               <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <ShieldCheck size={16} className="text-blue-500" /> PAN Certificate
               </h3>
@@ -248,7 +248,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowBusinessUsers(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-3xl md:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="md:hidden flex justify-center pt-3"><div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" /></div>
-            <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+            <div className="p-5 border-b border-gray-300 dark:border-gray-700 flex justify-between items-center">
               <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2"><Users size={18} className="text-purple-500" /> Business Staff</h3>
               <button onClick={() => setShowBusinessUsers(null)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full"><X size={16} className="text-gray-500" /></button>
             </div>
@@ -417,7 +417,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
 
       {/* ═════════ STATS ═════════ */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-300 dark:border-gray-700 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full -mr-4 -mt-4" />
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg"><Building2 size={14} className="text-blue-500" /></div>
@@ -425,7 +425,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
           </div>
           <p className="text-2xl font-extrabold text-gray-900 dark:text-white">{stats.total}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-300 dark:border-gray-700 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-4 -mt-4" />
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/20 rounded-lg"><CheckCircle size={14} className="text-emerald-500" /></div>
@@ -433,7 +433,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
           </div>
           <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{stats.verified}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-300 dark:border-gray-700 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/5 rounded-full -mr-4 -mt-4" />
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-lg"><AlertTriangle size={14} className="text-orange-500" /></div>
@@ -444,7 +444,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
       </div>
 
       {/* ═════════ SEARCH ═════════ */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center px-4 py-3">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 flex items-center px-4 py-3">
         <Search size={16} className="text-gray-400 mr-3 flex-shrink-0" />
         <input type="text" placeholder="Search by name or PAN..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400" />
@@ -454,8 +454,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
       </div>
 
       {/* ═════════ PENDING QUEUE ═════════ */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden border-l-4 border-l-orange-400">
-        <div className="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-orange-50/50 dark:bg-orange-900/5">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 overflow-hidden border-l-4 border-l-orange-400">
+        <div className="px-5 py-3.5 border-b border-gray-300 dark:border-gray-700 flex justify-between items-center bg-orange-50/50 dark:bg-orange-900/5">
           <h3 className="text-sm font-bold text-orange-700 dark:text-orange-400 flex items-center gap-2">
             <AlertTriangle size={16} /> Registration Queue
           </h3>
@@ -489,7 +489,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
 
         {/* Desktop table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
             <thead>
               <tr className="bg-gray-50/80 dark:bg-gray-900/30">
                 <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Business / PAN</th>
@@ -499,7 +499,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                 <th className="px-5 py-3 text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+            <tbody className="divide-y divide-gray-300 dark:divide-gray-700/50">
               {pendingBusinesses.map((biz) => (
                 <tr key={biz.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
                   <td className="px-5 py-3.5">
@@ -535,8 +535,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
       </div>
 
       {/* ═════════ VERIFIED BUSINESSES ═════════ */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-300 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-gray-300 dark:border-gray-700">
           <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
             <Building2 size={16} className="text-blue-500" /> Registered Businesses
           </h3>
@@ -567,7 +567,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
 
         {/* Desktop table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
             <thead>
               <tr className="bg-gray-50/80 dark:bg-gray-900/30">
                 <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Business / PAN</th>
@@ -577,7 +577,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                 <th className="px-5 py-3 text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+            <tbody className="divide-y divide-gray-300 dark:divide-gray-700/50">
               {verifiedBusinesses.map((biz) => (
                 <tr key={biz.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
                   <td className="px-5 py-3.5">
@@ -593,7 +593,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                     <p className="text-sm text-gray-800 dark:text-white font-medium">{biz.ownerName}</p>
                     <p className="text-[10px] text-gray-400">{biz.email}</p>
                   </td>
-                  <td className="px-5 py-3.5"><span className={`px-2 py-1 text-[10px] font-bold rounded-lg border ${biz.taxSystem === 'VAT' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'}`}>{biz.taxSystem}</span></td>
+                  <td className="px-5 py-3.5"><span className={`px-2 py-1 text-[10px] font-bold rounded-lg border ${biz.taxSystem === 'VAT' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' : 'bg-gray-50 text-gray-500 border-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'}`}>{biz.taxSystem}</span></td>
                   <td className="px-5 py-3.5 text-center">
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
                       <CheckCircle size={10} /> Verified
