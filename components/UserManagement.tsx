@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { UserPlus, Trash2, Mail, Phone, Lock } from 'lucide-react';
+import CustomSelect from './CustomSelect';
+import CustomConfirm from './CustomConfirm';
 
 interface UserManagementProps {
   staffList: User[];
@@ -12,6 +14,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ staffList, onAddStaff, 
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: string | null }>({ isOpen: false, id: null });
   
   // Form State
   const [name, setName] = useState('');
@@ -19,9 +22,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ staffList, onAddStaff, 
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(UserRole.STAFF);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmitted(true);
+    if (!e.currentTarget.checkValidity()) {
+        setError("Please properly fill out the highlighted fields.");
+        return;
+    }
+    
     setLoading(true);
     setError(null);
 
@@ -37,15 +47,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ staffList, onAddStaff, 
     }
   };
 
-  const handleRemove = async (id: string) => {
-      if(window.confirm("Are you sure you want to remove this user?")) {
-          try {
-              await onRemoveStaff(id);
-          } catch (e) {
-              alert("Failed to remove user");
-          }
-      }
-  }
+  const handleRemove = (id: string) => {
+      setConfirmDelete({ isOpen: true, id });
+  };
+
+  const confirmRemove = async () => {
+    if (!confirmDelete.id) return;
+    try {
+        await onRemoveStaff(confirmDelete.id);
+        setConfirmDelete({ isOpen: false, id: null });
+    } catch (e) {
+        setError("Failed to remove user");
+        setConfirmDelete({ isOpen: false, id: null });
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -197,7 +212,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ staffList, onAddStaff, 
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Add New Staff Member</h3>
             {error && <div className="mb-4 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-3 rounded">{error}</div>}
             
-            <form onSubmit={handleAdd} className="space-y-4">
+            <form onSubmit={handleAdd} noValidate className={`space-y-4 ${isSubmitted ? 'was-validated' : ''}`}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
                 <input 
@@ -247,14 +262,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ staffList, onAddStaff, 
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign Role</label>
-                <select 
-                  value={role} 
-                  onChange={e => setRole(e.target.value as UserRole)} 
-                  className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 sm:py-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                >
-                  <option value={UserRole.STAFF}>Staff (Upload Bills, Invoice)</option>
-                  <option value={UserRole.ACCOUNTANT}>Accountant (Full Access)</option>
-                </select>
+                <div className="mt-1">
+                  <CustomSelect
+                      value={role}
+                      onChange={(val) => setRole(val as UserRole)}
+                      options={[
+                          { value: UserRole.STAFF, label: 'Staff (Upload Bills, Invoice)' },
+                          { value: UserRole.ACCOUNTANT, label: 'Accountant (Full Access)' }
+                      ]}
+                  />
+                </div>
               </div>
               
               <div className="flex flex-col-reverse sm:flex-row justify-end sm:space-x-3 mt-6 gap-3 sm:gap-0">
@@ -277,6 +294,17 @@ const UserManagement: React.FC<UserManagementProps> = ({ staffList, onAddStaff, 
           </div>
         </div>
       )}
+
+      {/* Custom Confirm Dialog */}
+      <CustomConfirm
+        isOpen={confirmDelete.isOpen}
+        title="Remove Staff Member"
+        message="Are you sure you want to remove this user? They will lose access to the system immediately."
+        onConfirm={confirmRemove}
+        onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
+        type="danger"
+        confirmText="Remove User"
+      />
     </div>
   );
 };

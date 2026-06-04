@@ -4,6 +4,7 @@ import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capa
 import { Capacitor } from '@capacitor/core';
 import { analyzeBillImage, getConvertedDate } from '../services/aiService';
 import { Transaction, TransactionType, ExpenseCategory } from '../types';
+import CustomSelect from './CustomSelect';
 
 // --- Premium CSS Keyframes ---
 const billStyles = `
@@ -81,6 +82,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [category, setCategory] = useState<ExpenseCategory>(ExpenseCategory.MISC);
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
     // History Filter with Search
     const historyData = transactions.filter(t => {
@@ -258,8 +260,13 @@ const BillUpload: React.FC<BillUploadProps> = ({
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setIsSubmitted(true);
+        if (!e.currentTarget.checkValidity()) {
+           showToast('Please properly fill out the highlighted fields.', 'error');
+           return;
+        }
 
         const numAmount = parseFloat(amount);
 
@@ -473,7 +480,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
                             </div>
 
                             {/* Form */}
-                            <form onSubmit={handleSubmit} className="space-y-4">
+                            <form onSubmit={handleSubmit} noValidate className={`space-y-4 ${isSubmitted ? 'was-validated' : ''}`}>
                                 {/* Vendor Card */}
                                 <div className="p-4 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-3">
                                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5"><Building2 size={12} /> Vendor Info</p>
@@ -508,11 +515,13 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                     </div>
                                     <div>
                                         <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1"><Tag size={10} /> Category</label>
-                                        <select value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
-                                            {Object.values(ExpenseCategory).map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </select>
+                                        <div className="mt-1">
+                                          <CustomSelect
+                                            value={category}
+                                            onChange={(val) => setCategory(val as ExpenseCategory)}
+                                            options={Object.values(ExpenseCategory).map(cat => ({ value: cat, label: cat }))}
+                                          />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -542,14 +551,15 @@ const BillUpload: React.FC<BillUploadProps> = ({
                             </div>
                             {/* Date Filter */}
                             <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700 p-1.5 rounded-xl border border-gray-300 dark:border-gray-600">
-                                <select
+                                <CustomSelect
                                     value={historyDate === 'all' ? 'all' : 'custom'}
-                                    onChange={(e) => { if (e.target.value === 'all') setHistoryDate('all'); else setHistoryDate(new Date().toISOString().split('T')[0]); }}
-                                    className="bg-transparent border-none text-xs font-semibold text-gray-700 dark:text-gray-200 focus:ring-0 p-1 cursor-pointer outline-none"
-                                >
-                                    <option value="custom">Date</option>
-                                    <option value="all">All</option>
-                                </select>
+                                    onChange={(val) => { if (val === 'all') setHistoryDate('all'); else setHistoryDate(new Date().toISOString().split('T')[0]); }}
+                                    compact
+                                    options={[
+                                        { value: 'custom', label: 'Date' },
+                                        { value: 'all', label: 'All' },
+                                    ]}
+                                />
                                 {historyDate !== 'all' && (
                                     <input type="date" value={historyDate} onChange={(e) => setHistoryDate(e.target.value || 'all')} className="bg-transparent border-none text-xs text-gray-700 dark:text-gray-200 focus:ring-0 p-0.5 outline-none w-28" />
                                 )}
@@ -713,11 +723,13 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</label>
-                                            <select value={editForm.category || ''} onChange={e => setEditForm({ ...editForm, category: e.target.value as ExpenseCategory })} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
-                                                {Object.values(ExpenseCategory).map(cat => (
-                                                    <option key={cat} value={cat}>{cat}</option>
-                                                ))}
-                                            </select>
+                                            <div className="mt-1">
+                                              <CustomSelect
+                                                value={editForm.category || ''}
+                                                onChange={(val) => setEditForm({ ...editForm, category: val as ExpenseCategory })}
+                                                options={Object.values(ExpenseCategory).map(cat => ({ value: cat, label: cat }))}
+                                              />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

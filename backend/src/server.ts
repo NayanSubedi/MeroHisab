@@ -12,6 +12,7 @@ dotenv.config();
 import Business, { BusinessType } from './models/Business';
 import User, { UserRole } from './models/User';
 import Transaction from './models/Transaction';
+import AuditLog, { AuditAction } from './models/AuditLog';
 // ==========================================
 // 1. CONFIGURATION & CONSTANTS
 // ==========================================
@@ -23,10 +24,31 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const DATABASE_URL = process.env.DATABASE_URL || 'mongodb://127.0.0.1:27017/dainikhisab?directConnection=true';
 
 // ==========================================
-// 2. MONGOOSE CONNECTION
+// 2. MONGOOSE CONNECTION & DB SEED
 // ==========================================
 mongoose.connect(DATABASE_URL)
-  .then(() => console.log('✅ Connected to MongoDB via Mongoose'))
+  .then(async () => {
+    console.log('✅ Connected to MongoDB via Mongoose');
+    
+    // Seed initial Super Admin if none exists
+    try {
+      const adminExists = await User.findOne({ role: 'ADMIN' });
+      if (!adminExists) {
+        const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
+        await User.create({
+          name: 'Super Admin',
+          email: ADMIN_IDENTIFIER,
+          phone: '0000000000',
+          password: hashedPassword,
+          role: UserRole.ADMIN,
+          status: 'Active'
+        });
+        console.log(`✅ Seeded default Super Admin (${ADMIN_IDENTIFIER})`);
+      }
+    } catch (e) {
+      console.error('❌ Failed to seed admin:', e);
+    }
+  })
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 // ==========================================
@@ -35,13 +57,28 @@ mongoose.connect(DATABASE_URL)
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    
+    // Verify user actually still exists in DB
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ message: 'User account has been deleted' });
+    }
+
+    // If the user belongs to a business, verify the business still exists
+    if (user.businessId) {
+       const business = await Business.findById(user.businessId);
+       if (!business) {
+         return res.status(401).json({ message: 'Business account has been deleted' });
+       }
+    }
+
+    req.user = { ...decoded, name: user.name };
     next();
   } catch (err) {
     console.error("Auth Token Error:", err);
@@ -110,11 +147,6 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   const { identifier, password } = req.body;
 
-  if (identifier === ADMIN_IDENTIFIER && password === ADMIN_PASSWORD) {
-     const token = jwt.sign({ id: 'admin-id', role: 'ADMIN', name: 'Super Admin' }, JWT_SECRET, { expiresIn: '12h' });
-     return res.json({ token, user: { name: 'Super Admin', role: 'ADMIN', email: 'admin@dainikhisab.com' }, business: null });
-  }
-
   try {
     const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] }).lean();
     if (!user) return res.status(400).json({ message: 'User not found' });
@@ -149,6 +181,51 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // --- User Profile Routes ---
+app.get('/api/user/profile', authenticate, async (req, res) => {
+  try {
+      const user = await User.findById(req.user.id).lean();
+      if (!user) return res.status(401).json({ message: 'User not found. Session invalid.' });
+      
+      let business = null;
+      if (user.businessId) {
+          business = await Business.findById(user.businessId).lean();
+      }
+
+      const getBusinessType = (t: string) => {
+          if (t === 'PVT_LTD') return 'Pvt Ltd';
+          if (t === 'PARTNERSHIP') return 'Partnership';
+          return 'Sole Proprietor';
+      };
+
+      const profile = {
+          id: business ? business._id : 'admin',
+          name: business ? business.name : user.name,
+          pan: business ? business.pan : 'N/A',
+          address: business ? business.address : 'N/A',
+          addressLine1: business?.addressLine1,
+          addressLine2: business?.addressLine2,
+          city: business?.city,
+          province: business?.province,
+          country: business?.country,
+          zipCode: business?.zipCode,
+          logo: business?.logo,
+          ownerName: user.name,
+          email: user.email,
+          phone: user.phone || '',
+          type: business ? getBusinessType(business.type) : 'Sole Proprietor',
+          role: user.role,
+          isVerified: business ? business.isVerified : true,
+          taxSystem: business?.taxSystem || 'PAN',
+          annualTurnover: business?.annualTurnover || 0
+      };
+
+      res.json({ profile });
+  } catch (error) {
+      console.error("Profile Fetch Error:", error);
+      res.status(500).json({ message: 'Failed to fetch profile' });
+  }
+});
+
 app.put('/api/user/profile', authenticate, async (req, res) => {
   const { 
       name, email, newPassword, businessName, addressLine1, addressLine2, 
@@ -252,9 +329,16 @@ app.post('/api/users', authenticate, async (req, res) => {
     try {
         if (req.user.role !== 'OWNER') return res.status(403).json({ message: 'Restricted' });
         const { name, email, phone, role, password } = req.body;
+
+        if (!name || !email || !phone || !password) {
+            return res.status(400).json({ message: 'All fields (name, email, phone, password) are required.' });
+        }
         
-        const existing = await User.findOne({ $or: [{ email }, { phone }] });
-        if (existing) return res.status(400).json({ message: 'User exists' });
+        const existingEmail = await User.findOne({ email });
+        if (existingEmail) return res.status(400).json({ message: `A user with email "${email}" already exists.` });
+
+        const existingPhone = await User.findOne({ phone });
+        if (existingPhone) return res.status(400).json({ message: `A user with phone "${phone}" already exists.` });
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
@@ -311,6 +395,14 @@ app.post('/api/admin/create-admin', authenticate, requireAdmin, async (req, res)
 
         const { password: _, ...safeUser } = newAdmin.toObject();
         safeUser.id = safeUser._id;
+
+        await AuditLog.create({
+            adminId: req.user.id, adminName: req.user.name,
+            action: AuditAction.CREATE_ADMIN,
+            details: `Created new admin account: ${name}`,
+            targetId: newAdmin._id
+        });
+
         res.json(safeUser);
     } catch (error) { res.status(500).json({ message: 'Error creating admin' }); }
 });
@@ -321,6 +413,13 @@ app.delete('/api/admin/users/:id', authenticate, requireAdmin, async (req, res) 
 
         const user = await User.findByIdAndDelete(req.params.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
+
+        await AuditLog.create({
+            adminId: req.user.id, adminName: req.user.name,
+            action: AuditAction.DELETE_USER,
+            details: `Deleted user: ${user.name} (${user.email})`,
+            targetId: req.params.id
+        });
 
         res.json({ message: 'User deleted successfully' });
     } catch (error) { res.status(500).json({ message: 'Error deleting user.' }); }
@@ -333,6 +432,13 @@ app.patch('/api/admin/users/:id/password', authenticate, requireAdmin, async (re
 
         const hashedPassword = await bcrypt.hash(password, 10);
         await User.findByIdAndUpdate(req.params.id, { password: hashedPassword });
+
+        await AuditLog.create({
+            adminId: req.user.id, adminName: req.user.name,
+            action: AuditAction.CHANGE_PASSWORD,
+            details: `Changed password for user ID: ${req.params.id}`,
+            targetId: req.params.id
+        });
 
         res.json({ message: 'Password updated successfully' });
     } catch (error) { res.status(500).json({ message: 'Error updating password' }); }
@@ -355,6 +461,14 @@ app.patch('/api/admin/verify/:id', authenticate, requireAdmin, async (req, res) 
         else if (rejectionReason) updateData.rejectionReason = rejectionReason;
 
         const updated = await Business.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
+        await AuditLog.create({
+            adminId: req.user.id, adminName: req.user.name,
+            action: isVerified ? AuditAction.VERIFY_BUSINESS : AuditAction.REJECT_BUSINESS,
+            details: isVerified ? `Verified business: ${updated.name}` : `Rejected business: ${updated.name} (Reason: ${rejectionReason})`,
+            targetId: req.params.id
+        });
+
         res.json({ ...updated.toObject(), id: updated._id });
     } catch (error) { res.status(500).json({ message: 'Error updating status' }); }
 });
@@ -362,9 +476,24 @@ app.patch('/api/admin/verify/:id', authenticate, requireAdmin, async (req, res) 
 app.delete('/api/admin/business/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         // FindOneAndDelete triggers the middleware we set up to cascade delete users & transactions
-        await Business.findOneAndDelete({ _id: req.params.id });
+        const deletedBusiness = await Business.findOneAndDelete({ _id: req.params.id });
+        if (deletedBusiness) {
+            await AuditLog.create({
+                adminId: req.user.id, adminName: req.user.name,
+                action: AuditAction.DELETE_BUSINESS,
+                details: `Deleted business: ${deletedBusiness.name} (PAN: ${deletedBusiness.pan})`,
+                targetId: req.params.id
+            });
+        }
         res.json({ message: 'Business removed' });
     } catch (error) { res.status(500).json({ message: 'Error removing business' }); }
+});
+
+app.get('/api/admin/audit-logs', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const logs = await AuditLog.find().sort({ createdAt: -1 }).limit(100).lean();
+        res.json(logs.map(log => ({ ...log, id: log._id })));
+    } catch (error) { res.status(500).json({ message: 'Error fetching audit logs' }); }
 });
 
 // Catch-All 404 Handler

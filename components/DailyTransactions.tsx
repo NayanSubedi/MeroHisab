@@ -32,6 +32,7 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
   const [showAll, setShowAll] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [toast, setToast] = useState<{ message: string, type: 'error' | 'success'} | null>(null);
   const itemsPerPage = 10;
 
   const displayedTransactions = transactions.filter(t => {
@@ -112,7 +113,8 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
         html2pdf().set(opt).from(element).save().then(() => { setIsGeneratingPdf(false); });
       } catch (e) {
         console.error("PDF Gen Error:", e);
-        alert("Failed to generate PDF");
+        setToast({ message: "Failed to generate PDF", type: "error" });
+        setTimeout(() => setToast(null), 3000);
         setIsGeneratingPdf(false);
       }
     }, 100);
@@ -478,6 +480,19 @@ const DailyTransactions: React.FC<DailyTransactionsProps> = ({ transactions, bus
         </div>
       ) : null}
 
+      {/* Global Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[150] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-semibold backdrop-blur-sm max-w-md animate-in slide-in-from-bottom-5 duration-300
+            ${toast.type === 'success' ? 'bg-emerald-600/95 text-white shadow-emerald-600/30' : ''}
+            ${toast.type === 'error' ? 'bg-red-600/95 text-white shadow-red-600/30' : ''}
+        `}>
+            {toast.type === 'error' && <AlertTriangle size={18} />}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-auto opacity-70 hover:opacity-100 transition-opacity p-1">
+                <X size={14} />
+            </button>
+        </div>
+      )}
     </div>
   );
 };

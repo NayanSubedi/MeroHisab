@@ -20,7 +20,8 @@ import {
   Calendar,
   Home,
   PlusCircle,
-  MoreHorizontal
+  MoreHorizontal,
+  Activity
 } from 'lucide-react';
 import { BusinessProfile, UserRole } from '../types';
 import type { LucideIcon } from 'lucide-react';
@@ -73,6 +74,7 @@ function buildNavItems(role: UserRole): NavItem[] {
     return [
       { id: 'admin_dashboard', label: 'Registry', icon: ShieldCheck },
       { id: 'admin_users', label: 'Users', icon: Users },
+      { id: 'admin_logs', label: 'Activity Log', icon: Activity },
     ];
   }
 

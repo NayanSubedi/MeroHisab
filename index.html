@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Dainikhisab </title>
+    <link rel="icon" type="image/png" href="/icon.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -55,6 +56,13 @@
       .no-scrollbar {
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
+      }
+      /* Form Validation Helper */
+      .was-validated input:invalid,
+      .was-validated select:invalid,
+      .was-validated textarea:invalid {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2) !important;
       }
     </style>
   <script type="importmap">

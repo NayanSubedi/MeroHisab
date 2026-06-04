@@ -6,6 +6,7 @@ import {
   FileText, UserPlus, Mail, Phone, Lock, Calculator, Search, BadgeCheck, Loader2
 } from 'lucide-react';
 import { api } from '../services/api';
+import CustomConfirm from './CustomConfirm';
 
 interface AdminDashboardProps {
   token: string;
@@ -18,6 +19,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
   const [selectedBusiness, setSelectedBusiness] = useState<BusinessProfile | null>(null);
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
   const [adminForm, setAdminForm] = useState({ name: '', email: '', phone: '', password: '' });
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [showBusinessUsers, setShowBusinessUsers] = useState<string | null>(null);
   const [businessUsers, setBusinessUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -27,6 +29,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
   const [isProcessingVerification, setIsProcessingVerification] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({ total: 0, pending: 0, verified: 0 });
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, title: string, message: string, action: () => void, type: 'danger' | 'warning' }>({ isOpen: false, title: '', message: '', action: () => {}, type: 'danger' });
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const fetchBusinesses = async () => {
     setLoading(true);
@@ -65,51 +74,73 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
     try {
       await api.verifyBusiness(verifyingBusiness.id!, true, token);
       setVerifyingBusiness(null);
+      showToast("Business successfully verified!", 'success');
       fetchBusinesses();
-    } catch (e) { alert("Failed to verify business"); }
+    } catch (e) { showToast("Failed to verify business", 'error'); }
     finally { setIsProcessingVerification(false); }
   };
 
   const handleReject = async () => {
     if (!verifyingBusiness) return;
-    if (!rejectReason.trim()) { alert("Please enter a reason for rejection."); return; }
+    if (!rejectReason.trim()) { showToast("Please enter a reason for rejection.", 'warning'); return; }
     setIsProcessingVerification(true);
     try {
       await api.verifyBusiness(verifyingBusiness.id!, false, token, rejectReason);
-      alert("Business rejected. The reason has been recorded.");
+      showToast("Business rejected. The reason has been recorded.", 'success');
       setVerifyingBusiness(null);
       fetchBusinesses();
-    } catch (e) { alert("Failed to reject business"); console.error(e); }
+    } catch (e) { showToast("Failed to reject business", 'error'); console.error(e); }
     finally { setIsProcessingVerification(false); }
   };
 
-  const handleRevoke = async (id: string) => {
-    if (!window.confirm("Are you sure you want to revoke verification?")) return;
-    try { await api.verifyBusiness(id, false, token); fetchBusinesses(); }
-    catch (e) { alert("Failed to update status"); }
+  const handleRevoke = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Revoke Verification',
+      message: 'Are you sure you want to revoke verification?',
+      type: 'warning',
+      action: async () => {
+        try { await api.verifyBusiness(id, false, token); showToast("Verification revoked.", 'success'); fetchBusinesses(); }
+        catch (e) { showToast("Failed to update status", 'error'); }
+        finally { setConfirmDialog(prev => ({ ...prev, isOpen: false })); }
+      }
+    });
   };
 
-  const handleRemove = async (id: string) => {
-    if (!window.confirm("Are you sure? This deletes the business and all users.")) return;
-    try { await api.removeBusiness(id, token); fetchBusinesses(); }
-    catch (e) { alert("Failed to delete business"); }
+  const handleRemove = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Business',
+      message: 'Are you sure? This deletes the business and all users.',
+      type: 'danger',
+      action: async () => {
+        try { await api.removeBusiness(id, token); showToast("Business deleted.", 'success'); fetchBusinesses(); }
+        catch (e) { showToast("Failed to delete business", 'error'); }
+        finally { setConfirmDialog(prev => ({ ...prev, isOpen: false })); }
+      }
+    });
   };
 
-  const handleCreateAdmin = async (e: React.FormEvent) => {
+  const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmitted(true);
+    if (!e.currentTarget.checkValidity()) {
+        showToast("Please properly fill out the highlighted fields.", "error");
+        return;
+    }
     try {
       await api.createAdmin(adminForm, token);
-      alert("Admin created successfully!");
+      showToast("Admin created successfully!", 'success');
       setShowCreateAdmin(false);
       setAdminForm({ name: '', email: '', phone: '', password: '' });
-    } catch (e: any) { console.error(e); alert(`Failed to create admin: ${e.message}`); }
+    } catch (e: any) { console.error(e); showToast(`Failed to create admin: ${e.message}`, 'error'); }
   };
 
   const handleViewUsers = async (businessId: string) => {
     setShowBusinessUsers(businessId);
     setLoadingUsers(true);
     try { const users = await api.getBusinessUsers(businessId, token); setBusinessUsers(users); }
-    catch (e) { alert("Failed to fetch business users"); setShowBusinessUsers(null); }
+    catch (e) { showToast("Failed to fetch business users", 'error'); setShowBusinessUsers(null); }
     finally { setLoadingUsers(false); }
   };
 
@@ -217,7 +248,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
                   <X size={16} className="text-gray-500" />
                 </button>
               </div>
-              <form onSubmit={handleCreateAdmin} className="space-y-3">
+              <form onSubmit={handleCreateAdmin} noValidate className={`space-y-3 ${isSubmitted ? 'was-validated' : ''}`}>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Name</label>
                   <input required type="text" value={adminForm.name} onChange={e => setAdminForm({...adminForm, name: e.target.value})} className={inputClass} />
@@ -616,6 +647,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ token }) => {
           </table>
         </div>
       </div>
+
+      <CustomConfirm
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.action}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Global Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-semibold backdrop-blur-sm max-w-md animate-in slide-in-from-bottom-5 duration-300
+            ${toast.type === 'success' ? 'bg-green-600/95 text-white shadow-green-600/30' : ''}
+            ${toast.type === 'error' ? 'bg-red-600/95 text-white shadow-red-600/30' : ''}
+            ${toast.type === 'warning' ? 'bg-amber-500/95 text-white shadow-amber-500/30' : ''}
+        `}>
+            {toast.type === 'success' && <CheckCircle size={18} />}
+            {toast.type === 'error' && <XCircle size={18} />}
+            {toast.type === 'warning' && <AlertTriangle size={18} />}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-auto opacity-70 hover:opacity-100 transition-opacity p-1">
+                <X size={14} />
+            </button>
+        </div>
+      )}
     </div>
   );
 };

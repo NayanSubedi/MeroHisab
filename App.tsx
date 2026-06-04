@@ -5,9 +5,11 @@ import Dashboard from './components/Dashboard';
 import BillUpload from './components/BillUpload';
 import InvoiceGenerator from './components/InvoiceGenerator';
 import Reports from './components/Reports';
+import CustomConfirm from './components/CustomConfirm';
 import UserManagement from './components/UserManagement';
 import AdminDashboard from './components/AdminDashboard';
 import AdminUsers from './components/AdminUsers';
+import AdminAuditLogs from './components/AdminAuditLogs';
 import ProfileSettings from './components/ProfileSettings';
 import DailyTransactions from './components/DailyTransactions';
 // import PredictiveAnalysis from './components/PredictiveAnalysis';
@@ -15,10 +17,12 @@ import { BusinessProfile, Transaction, UserRole, User } from './types';
 import { Loader2 } from 'lucide-react';
 import { api } from './services/api';
 import { Preferences } from '@capacitor/preferences';
+import { biometricService } from './services/biometricService';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [sessionExpiredAlert, setSessionExpiredAlert] = useState(false);
   const [userProfile, setUserProfile] = useState<BusinessProfile | null>(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [token, setToken] = useState<string>('');
@@ -31,7 +35,6 @@ const App: React.FC = () => {
   const handleLogout = useCallback(async () => {
     console.log("Logging out & clearing session...");
     await Preferences.remove({ key: 'token' });
-
     await Preferences.remove({ key: 'userProfile' });
 
     setIsAuthenticated(false);
@@ -39,15 +42,17 @@ const App: React.FC = () => {
     setToken('');
     setTransactions([]);
     setStaffList([]);
-    setCurrentView('dashboard'); // Reset view for next login
+    setCurrentView('dashboard');
     Preferences.remove({ key: 'lastView' });
+    // NOTE: We intentionally do NOT clear biometric credentials here.
+    // The user can log back in with fingerprint on the next launch.
   }, []);
 
   // --- GLOBAL AUTH EXPIRATION LISTENER ---
   useEffect(() => {
     const handleAuthExpire = () => {
-      alert("Session expired or server disconnected. Please log in again.");
       handleLogout();
+      setSessionExpiredAlert(true);
     };
     window.addEventListener('auth-expired', handleAuthExpire);
     return () => window.removeEventListener('auth-expired', handleAuthExpire);
@@ -88,30 +93,70 @@ const App: React.FC = () => {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const { value: storedToken } = await Preferences.get({ key: 'token' });
-        const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
+        let finalToken = null;
+        let finalProfileString = null;
 
-        if (storedToken && storedProfile) {
-          const parsedProfile = JSON.parse(storedProfile);
-          setUserProfile(parsedProfile);
-          setToken(storedToken);
+        // --- BIOMETRIC CHECK ---
+        const bioEnabled = await biometricService.isBiometricsEnabled();
+        let biometricUsed = false;
+
+        if (bioEnabled) {
+          // Trigger biometric prompt
+          const bioSession = await biometricService.verifyAndRetrieveSession();
+          if (bioSession) {
+             finalToken = bioSession.token;
+             finalProfileString = JSON.stringify(bioSession.userProfile);
+             biometricUsed = true;
+          } else {
+             handleLogout();
+             return; 
+          }
+        } else {
+          const { value: storedToken } = await Preferences.get({ key: 'token' });
+          const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
+          finalToken = storedToken;
+          finalProfileString = storedProfile;
+        }
+
+        if (finalToken && finalProfileString) {
+          let latestProfile = JSON.parse(finalProfileString);
+          
+          // Verify with backend to get fresh data and catch deleted/invalid users
+          try {
+             const freshData = await api.getProfile(finalToken);
+             latestProfile = freshData.profile;
+             await Preferences.set({ key: 'userProfile', value: JSON.stringify(latestProfile) });
+             
+             // Update biometric vault too if it was used
+             if (biometricUsed) {
+                await biometricService.enableBiometrics(finalToken, latestProfile);
+             }
+          } catch (profileErr) {
+             console.error("Session verification failed on mount:", profileErr);
+             if (biometricUsed) await biometricService.disableBiometrics();
+             handleLogout();
+             return;
+          }
+
+          setUserProfile(latestProfile);
+          setToken(finalToken);
           setIsAuthenticated(true);
 
           const { value: storedView } = await Preferences.get({ key: 'lastView' });
           if (storedView) {
             setCurrentView(storedView);
-          } else if (parsedProfile.role === UserRole.ADMIN) {
+          } else if (latestProfile.role === UserRole.ADMIN) {
             setCurrentView('admin_dashboard');
-          } else if (parsedProfile.role === UserRole.STAFF) {
+          } else if (latestProfile.role === UserRole.STAFF) {
             setCurrentView('upload');
           } else {
             setCurrentView('dashboard');
           }
 
-          if (parsedProfile.role !== UserRole.ADMIN) {
-            fetchTransactions(storedToken);
-            if (parsedProfile.role === UserRole.OWNER) {
-              fetchStaff(storedToken);
+          if (latestProfile.role !== UserRole.ADMIN) {
+            fetchTransactions(finalToken);
+            if (latestProfile.role === UserRole.OWNER) {
+              fetchStaff(finalToken);
             }
           }
         }
@@ -206,12 +251,26 @@ const App: React.FC = () => {
   }
 
   if (!isAuthenticated || !userProfile) {
-    return <Auth onLogin={handleLogin} />;
+    return (
+      <>
+        <Auth onLogin={handleLogin} />
+        <CustomConfirm
+          isOpen={sessionExpiredAlert}
+          title="Session Expired"
+          message="Your session has expired or your account was disconnected. Please log in again."
+          type="warning"
+          confirmText="Okay"
+          onConfirm={() => setSessionExpiredAlert(false)}
+          onCancel={() => setSessionExpiredAlert(false)}
+        />
+      </>
+    );
   }
 
   const renderView = () => {
     if (currentView === 'admin_dashboard') return <AdminDashboard token={token} />;
     if (currentView === 'admin_users') return <AdminUsers token={token} />;
+    if (currentView === 'admin_logs') return <AdminAuditLogs token={token} />;
 
     switch (currentView) {
       case 'dashboard':
@@ -244,9 +303,20 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout currentView={currentView} setView={handleSetView} userProfile={userProfile} logout={handleLogout}>
-      {renderView()}
-    </Layout>
+    <>
+      <Layout currentView={currentView} setView={handleSetView} userProfile={userProfile} logout={handleLogout}>
+        {renderView()}
+      </Layout>
+      <CustomConfirm
+        isOpen={sessionExpiredAlert}
+        title="Session Expired"
+        message="Your session has expired or your account was disconnected. Please log in again."
+        type="warning"
+        confirmText="Okay"
+        onConfirm={() => setSessionExpiredAlert(false)}
+        onCancel={() => setSessionExpiredAlert(false)}
+      />
+    </>
   );
 };
 

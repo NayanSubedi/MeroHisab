@@ -79,6 +79,14 @@ export const api = {
     return handleResponse(response);
   },
 
+  getProfile: async (token: string) => {
+    const response = await fetch(`${API_URL}/user/profile`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return handleResponse(response);
+  },
+
   updateProfile: async (data: any, token: string) => {
     const response = await fetch(`${API_URL}/user/profile`, {
         method: 'PUT',
@@ -96,6 +104,13 @@ export const api = {
   // ==========================================
   getAllBusinesses: async (token: string) => {
     const response = await fetch(`${API_URL}/admin/businesses`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return handleResponse(response);
+  },
+
+  getAuditLogs: async (token: string) => {
+    const response = await fetch(`${API_URL}/admin/audit-logs`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     return handleResponse(response);

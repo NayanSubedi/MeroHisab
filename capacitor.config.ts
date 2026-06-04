@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.dainikhisab.app',
-  appName: 'Mero Hisab',
+  appName: 'Dainik Hisab',
   webDir: 'dist',
   server: {
     // 1. Force Android to use HTTP (fixes Mixed Content error)

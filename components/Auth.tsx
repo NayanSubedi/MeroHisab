@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, UploadCloud, CheckCircle, Smartphone, Mail, Fingerprint, AlertCircle, MapPin, Calculator, ShieldCheck, User, Building, Phone, Key, ArrowRight, Loader2 } from 'lucide-react';
 import { BusinessProfile, UserRole } from '../types';
 import { api } from '../services/api';
-import { Preferences } from '@capacitor/preferences'
+import { Preferences } from '@capacitor/preferences';
+import { biometricService } from '../services/biometricService';
+import CustomSelect from './CustomSelect';
 
 interface AuthProps {
   onLogin: (profile: BusinessProfile, token: string) => void;
@@ -11,9 +13,48 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [isRegister, setIsRegister] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [hasBiometricSession, setHasBiometricSession] = useState(false);
+
+  useEffect(() => {
+    // Check if there's a saved biometric session the user can use to log in
+    biometricService.isBiometricsEnabled().then(enabled => setHasBiometricSession(enabled));
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setLoading(true); setError(null);
+    try {
+      const session = await biometricService.verifyAndRetrieveSession();
+      if (session) {
+        try {
+          // Verify with the backend if the token is still valid.
+          // This prevents deleted users from logging in via locally cached biometric credentials.
+          const freshData = await api.getProfile(session.token);
+          const freshProfile = freshData.profile;
+
+          // Re-store in plain preferences so the app session works normally with fresh data
+          await Preferences.set({ key: 'token', value: session.token });
+          await Preferences.set({ key: 'userProfile', value: JSON.stringify(freshProfile) });
+          onLogin(freshProfile, session.token);
+        } catch (apiErr: any) {
+           // If the token is invalid or the user is deleted, the backend will return a 401 or 404.
+           console.error("Biometric session invalid on backend:", apiErr);
+           await biometricService.disableBiometrics();
+           setHasBiometricSession(false);
+           setError('Your session is invalid or your account was deleted. Biometric login has been disabled.');
+        }
+      } else {
+        setError('Fingerprint scan failed or was canceled. Please use your password.');
+      }
+    } catch (e: any) {
+      setError('Biometric authentication failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Form States
   const [phone, setPhone] = useState('');
@@ -45,8 +86,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true); setError(null);
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); 
+    setIsSubmitted(true);
+    setError(null); 
+    setSuccessMsg(null);
+    
+    if (!e.currentTarget.checkValidity()) {
+      setError("Please properly fill in the highlighted fields.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const data = await api.login({ identifier: phone, password });
       const getBusinessType = (t: string) => {
@@ -89,8 +140,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(null); setSuccessMsg(null);
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); 
+    setIsSubmitted(true);
+    setError(null); 
+    setSuccessMsg(null);
+
+    // Provide immediate feedback before custom regex/checks
+    if (!e.currentTarget.checkValidity()) {
+      setError("Please properly fill in all highlighted fields.");
+      return;
+    }
+    
     if (pan.length !== 9 || isNaN(Number(pan))) { setError("PAN must be a 9-digit number."); return; }
     if (!panPhoto) { setError("Please upload your PAN certificate image."); return; }
 
@@ -187,7 +248,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           )}
 
           {isRegister ? (
-            <form onSubmit={handleRegister} className="space-y-8 animate-in fade-in duration-500">
+            <form onSubmit={handleRegister} noValidate className={`space-y-8 animate-in fade-in duration-500 ${isSubmitted ? 'was-validated' : ''}`}>
               
               {/* Section 1: Business Details */}
               <div className="space-y-4">
@@ -202,13 +263,16 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   </div>
                   <div>
                     <label className={labelClass}>Business Type *</label>
-                    <div className="relative">
-                      <select value={businessType} onChange={e => setBusinessType(e.target.value)} className={`${inputClass} appearance-none pr-10`}>
-                        <option>Sole Proprietor</option>
-                        <option>Partnership</option>
-                        <option>Pvt Ltd</option>
-                      </select>
-                    </div>
+                    <CustomSelect
+                      value={businessType}
+                      onChange={setBusinessType}
+                      required
+                      options={[
+                        { value: 'Sole Proprietor', label: 'Sole Proprietor' },
+                        { value: 'Partnership', label: 'Partnership' },
+                        { value: 'Pvt Ltd', label: 'Pvt Ltd' },
+                      ]}
+                    />
                   </div>
                 </div>
               </div>
@@ -223,10 +287,15 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>Tax System *</label>
-                    <select value={taxSystem} onChange={e => setTaxSystem(e.target.value as 'PAN' | 'VAT')} className={`${inputClass} appearance-none`}>
-                      <option value="PAN">PAN Only (Non-VAT)</option>
-                      <option value="VAT">VAT Registered (13%)</option>
-                    </select>
+                    <CustomSelect
+                      value={taxSystem}
+                      onChange={(val) => setTaxSystem(val as 'PAN' | 'VAT')}
+                      required
+                      options={[
+                        { value: 'PAN', label: 'PAN Only (Non-VAT)' },
+                        { value: 'VAT', label: 'VAT Registered (13%)' },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>PAN/VAT Number *</label>
@@ -316,13 +385,21 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   </div>
                   <div>
                     <label className={labelClass}>Province *</label>
-                    <select required value={province} onChange={e => setProvince(e.target.value)} className={`${inputClass} appearance-none`}>
-                      <option value="">Select Province</option>
-                      <option value="Koshi">Koshi</option><option value="Madhesh">Madhesh</option>
-                      <option value="Bagmati">Bagmati</option><option value="Gandaki">Gandaki</option>
-                      <option value="Lumbini">Lumbini</option><option value="Karnali">Karnali</option>
-                      <option value="Sudurpaschim">Sudurpaschim</option>
-                    </select>
+                    <CustomSelect
+                      value={province}
+                      onChange={setProvince}
+                      required
+                      placeholder="Select Province"
+                      options={[
+                        { value: 'Koshi', label: 'Koshi' },
+                        { value: 'Madhesh', label: 'Madhesh' },
+                        { value: 'Bagmati', label: 'Bagmati' },
+                        { value: 'Gandaki', label: 'Gandaki' },
+                        { value: 'Lumbini', label: 'Lumbini' },
+                        { value: 'Karnali', label: 'Karnali' },
+                        { value: 'Sudurpaschim', label: 'Sudurpaschim' },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Country *</label>
@@ -384,6 +461,19 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 {loading ? <Loader2 className="animate-spin" size={18} /> : 'Sign In'}
                 {!loading && <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
               </button>
+
+              {/* Fingerprint Login Button */}
+              {hasBiometricSession && (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleBiometricLogin}
+                  className="w-full flex justify-center items-center gap-3 py-3.5 px-4 rounded-xl border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-[0.98]"
+                >
+                  <Fingerprint size={20} />
+                  Login with Fingerprint
+                </button>
+              )}
 
               <div className="text-center mt-12 pt-6 border-t border-gray-300 dark:border-gray-800">
                 <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">

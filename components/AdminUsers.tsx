@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { UserRole } from '../types';
+import CustomConfirm from './CustomConfirm';
 
 interface SystemUser {
   id: string;
@@ -31,36 +32,24 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, user: SystemUser | null }>({ isOpen: false, user: null });
 
   // Password Edit State
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
-    
-    // Define Super Admin (Hardcoded representation)
-    const superAdmin: SystemUser = {
-        id: 'super-admin-sys',
-        name: 'Super Admin',
-        email: 'admin@dainikhisab.com',
-        phone: 'N/A',
-        role: UserRole.ADMIN,
-        status: 'Active',
-        businessId: null,
-        business: null,
-        createdAt: new Date().toISOString()
-    };
-
     try {
       const data = await api.getAllSystemUsers(token);
-      setUsers([superAdmin, ...data]);
+      setUsers(data);
     } catch (error) {
       console.error("Failed to fetch users", error);
       setError("Failed to load user list. Please check your connection.");
-      setUsers([superAdmin]);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -71,35 +60,42 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
   }, []);
 
   // Handle User Deletion
-  const handleDelete = async (user: SystemUser) => {
-    if (user.id === 'super-admin-sys') return;
-    
-    if (!window.confirm(`Are you sure you want to delete ${user.name}? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDelete = (user: SystemUser) => {
+    setConfirmDialog({ isOpen: true, user });
+  };
+
+  const confirmDelete = async () => {
+    if (!confirmDialog.user) return;
+    const user = confirmDialog.user;
 
     try {
       setError(null);
       setSuccessMsg(null);
-      // NOTE: You need to implement deleteSystemUser in your api.ts
       await api.deleteSystemUser(user.id, token);
       
       setSuccessMsg(`User ${user.name} deleted successfully.`);
-      fetchUsers(); // Refresh the list
+      fetchUsers();
     } catch (err) {
       console.error("Failed to delete user", err);
       setError("Failed to delete user. They might be tied to existing records.");
+    } finally {
+        setConfirmDialog({ isOpen: false, user: null });
     }
   };
 
   // Handle Password Update
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUser || !newPassword) return;
+    if (!editingUser) return;
+    
+    if (!newPassword || newPassword.length < 6) {
+      setModalError("Password must be at least 6 characters.");
+      return;
+    }
 
     try {
       setActionLoading(true);
-      setError(null);
+      setModalError(null);
       setSuccessMsg(null);
       
       // NOTE: You need to implement updateSystemUserPassword in your api.ts
@@ -110,7 +106,7 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
       setNewPassword('');
     } catch (err) {
       console.error("Failed to update password", err);
-      setError("Failed to update password. Please try again.");
+      setModalError("Failed to update password. Please try again.");
     } finally {
       setActionLoading(false);
     }
@@ -217,7 +213,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
                                     )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    {user.id !== 'super-admin-sys' ? (
                                       <div className="flex items-center justify-end space-x-3">
                                         <button
                                           onClick={() => setEditingUser(user)}
@@ -234,9 +229,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
                                           <Trash2 size={18} />
                                         </button>
                                       </div>
-                                    ) : (
-                                      <span className="text-xs text-gray-400 italic">System Protected</span>
-                                    )}
                                 </td>
                             </tr>
                         ))
@@ -266,14 +258,14 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
                 Reset Password
               </h3>
               <button 
-                onClick={() => { setEditingUser(null); setNewPassword(''); }}
+                onClick={() => { setEditingUser(null); setNewPassword(''); setModalError(null); }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={handleUpdatePassword} className="p-5 space-y-4">
+            <form onSubmit={handleUpdatePassword} noValidate className="p-5 space-y-4">
               <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg text-sm text-gray-600 dark:text-gray-300 mb-4">
                 You are changing the password for <span className="font-bold">{editingUser.name}</span> ({editingUser.email}).
               </div>
@@ -284,19 +276,23 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
                 </label>
                 <input
                   type="password"
-                  required
-                  minLength={6}
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (modalError) setModalError(null); // Clear inline error on type
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent outline-none transition-all ${
+                    modalError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-indigo-500'
+                  }`}
                   placeholder="Enter new password"
                 />
+                {modalError && <p className="text-red-500 text-xs mt-2 font-medium flex items-center gap-1"><AlertCircle size={12}/> {modalError}</p>}
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => { setEditingUser(null); setNewPassword(''); }}
+                  onClick={() => { setEditingUser(null); setNewPassword(''); setModalError(null); }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                 >
                   Cancel
@@ -317,6 +313,17 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ token }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <CustomConfirm
+        isOpen={confirmDialog.isOpen}
+        title="Delete Admin"
+        message={`Are you sure you want to delete ${confirmDialog.user?.name}? This action cannot be undone.`}
+        type="danger"
+        confirmText="Delete Admin"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDialog({ isOpen: false, user: null })}
+      />
     </div>
   );
 };

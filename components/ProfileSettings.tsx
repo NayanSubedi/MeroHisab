@@ -3,6 +3,8 @@ import { BusinessProfile } from '../types';
 import { api } from '../services/api';
 import { Save, Lock, User, Building, MapPin, CheckCircle, AlertCircle, Camera, Fingerprint, Loader2, Shield, Settings, ChevronRight } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
+import { biometricService } from '../services/biometricService';
+import CustomSelect from './CustomSelect';
 
 interface ProfileSettingsProps {
   userProfile: BusinessProfile;
@@ -14,6 +16,37 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Biometric State
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
+
+  useEffect(() => {
+    biometricService.isAvailable().then(avail => setIsBiometricsAvailable(avail));
+    biometricService.isBiometricsEnabled().then(enabled => setBiometricEnabled(enabled));
+  }, []);
+
+  const toggleBiometrics = async () => {
+    if (biometricEnabled) {
+      // Disabling: restore token to plain Preferences so session persists
+      await Preferences.set({ key: 'token', value: token });
+      await Preferences.set({ key: 'userProfile', value: JSON.stringify(userProfile) });
+      await biometricService.disableBiometrics();
+      setBiometricEnabled(false);
+      setMessage({ type: 'success', text: 'App Lock is now disabled.' });
+    } else {
+      const enabled = await biometricService.enableBiometrics(token, userProfile);
+      if (enabled) {
+        setBiometricEnabled(true);
+        setMessage({ type: 'success', text: 'App Lock enabled! Your fingerprint is required on launch.' });
+        // Remove plain-text session now that it's in the secure enclave
+        await Preferences.remove({ key: 'token' });
+        await Preferences.remove({ key: 'userProfile' });
+      } else {
+        setMessage({ type: 'error', text: 'Fingerprint scan canceled or failed. App Lock was not enabled.' });
+      }
+    }
+  };
 
   // Business Info State
   const [businessName, setBusinessName] = useState(userProfile.name);
@@ -29,6 +62,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
   const [ownerName, setOwnerName] = useState(userProfile.ownerName);
   const [email, setEmail] = useState(userProfile.email);
   const [newPassword, setNewPassword] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,8 +79,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
 
   const triggerFileInput = () => { fileInputRef.current?.click(); };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmitted(true);
+    if (!e.currentTarget.checkValidity()) {
+      setMessage({ type: 'error', text: 'Please properly fill out all marked fields.' });
+      return;
+    }
+    
     setLoading(true);
     setMessage(null);
 
@@ -111,7 +151,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <form onSubmit={handleSubmit} noValidate className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${isSubmitted ? 'was-validated' : ''}`}>
 
         {/* LEFT COLUMN */}
         <div className="md:col-span-1 space-y-4">
@@ -159,6 +199,26 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
                 className={inputClass}
               />
             </div>
+            
+            {/* Biometric Toggle */}
+            {isBiometricsAvailable && (
+              <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                     <Fingerprint size={16} className="text-gray-500" />
+                     <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">App Lock</h4>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">Require fingerprint on app launch.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleBiometrics}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${biometricEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${biometricEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+            )}
           </div>
 
 
@@ -237,16 +297,21 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
               </div>
               <div>
                 <label className={labelClass}>Province *</label>
-                <select required value={province} onChange={e => setProvince(e.target.value)} className={inputClass}>
-                  <option value="">Select Province</option>
-                  <option value="Koshi">Koshi</option>
-                  <option value="Madhesh">Madhesh</option>
-                  <option value="Bagmati">Bagmati</option>
-                  <option value="Gandaki">Gandaki</option>
-                  <option value="Lumbini">Lumbini</option>
-                  <option value="Karnali">Karnali</option>
-                  <option value="Sudurpaschim">Sudurpaschim</option>
-                </select>
+                <CustomSelect
+                  value={province}
+                  onChange={setProvince}
+                  required
+                  placeholder="Select Province"
+                  options={[
+                    { value: 'Koshi', label: 'Koshi' },
+                    { value: 'Madhesh', label: 'Madhesh' },
+                    { value: 'Bagmati', label: 'Bagmati' },
+                    { value: 'Gandaki', label: 'Gandaki' },
+                    { value: 'Lumbini', label: 'Lumbini' },
+                    { value: 'Karnali', label: 'Karnali' },
+                    { value: 'Sudurpaschim', label: 'Sudurpaschim' },
+                  ]}
+                />
               </div>
               <div>
                 <label className={labelClass}>Country *</label>

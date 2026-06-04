@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Printer, Download, Eye, QrCode, CreditCard, Banknote, Loader2, CheckSquare, Square, Search, FileText, AlertCircle, Trash2, X, Percent, Calendar, User, Phone, Plus, RefreshCw, MapPin, Hash, ChevronLeft, ChevronRight, ArrowLeft, Wallet, CheckCircle, Sparkles, Building2, ShoppingCart } from 'lucide-react';
 import { InvoiceItem, BusinessProfile, Transaction, TransactionType, UnitType, InvoiceDetails, PaymentMethod } from '../types';
+import CustomSelect from './CustomSelect';
 
 // --- Premium CSS ---
 const invoiceStyles = `
@@ -456,9 +457,12 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                                                 <input type="number" value={item.quantity} onChange={e => updateItem(item.id, 'quantity', e.target.valueAsNumber)} className="w-full bg-gray-50/50 dark:bg-gray-900/50 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded-lg text-center py-1.5 focus:bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium" />
                                             </td>
                                             <td className="px-4 py-2.5">
-                                                <select value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} className="w-full bg-transparent hover:bg-gray-50 dark:hover:bg-gray-900/50 border-none rounded-lg text-center p-1.5 text-xs text-gray-500 font-medium focus:ring-0 cursor-pointer outline-none transition-colors">
-                                                    {unitOptions.map(u => <option key={u} value={u}>{u}</option>)}
-                                                </select>
+                                                <CustomSelect
+                                                    value={item.unit}
+                                                    onChange={(val) => updateItem(item.id, 'unit', val)}
+                                                    compact
+                                                    options={unitOptions.map(u => ({ value: u, label: u }))}
+                                                />
                                             </td>
                                             <td className="px-4 py-2.5">
                                                 <input type="number" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.valueAsNumber)} className="w-full bg-gray-50/50 dark:bg-gray-900/50 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded-lg text-right py-1.5 focus:bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium" />
@@ -499,16 +503,17 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ businessProfile, on
                                      <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
                                          <Wallet size={14} className="mr-1.5 text-emerald-400"/> Payment
                                      </div>
-                                     <select 
-                                        value={paymentMethod} 
-                                        onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                                        className="py-1.5 px-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700 text-sm font-semibold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 outline-none w-32 text-right transition-all"
-                                     >
-                                         <option value="Cash">Cash</option>
-                                         <option value="QR">QR / Digital</option>
-                                         <option value="Credit">Credit/Due</option>
-                                         <option value="Card">Bank Card</option>
-                                     </select>
+                                     <CustomSelect
+                                        value={paymentMethod}
+                                        onChange={(val) => setPaymentMethod(val as PaymentMethod)}
+                                        compact
+                                        options={[
+                                            { value: 'Cash', label: 'Cash' },
+                                            { value: 'QR', label: 'QR / Digital' },
+                                            { value: 'Credit', label: 'Credit/Due' },
+                                            { value: 'Card', label: 'Bank Card' },
+                                        ]}
+                                     />
                                  </div>
 
                                  {isVatRegistered && (
