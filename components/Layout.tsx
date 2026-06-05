@@ -95,7 +95,13 @@ function buildNavItems(role: UserRole): NavItem[] {
 }
 
 function buildBottomNavItems(role: UserRole, navItems: NavItem[]): NavItem[] {
-  if (role === UserRole.ADMIN) return navItems.slice(0, 4);
+  if (role === UserRole.ADMIN) {
+    return [
+      ...navItems.slice(0, 4),
+      { id: 'menu', icon: MoreHorizontal, label: 'More' }
+    ];
+  }
+
   return [
     { id: 'dashboard', icon: Home, label: 'Home' },
     { id: 'daily', icon: Calendar, label: 'History' },
