@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
     cleartext: true,
     // 3. Whitelist your API IPs (Optional but recommended)
     allowNavigation: [
-      "192.168.1.64", 
+      "192.168.1.66", 
       "10.0.2.2"
     ]
   }

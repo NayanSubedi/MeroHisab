@@ -3,7 +3,6 @@ import { Eye, EyeOff, UploadCloud, CheckCircle, Smartphone, Mail, Fingerprint, A
 import { BusinessProfile, UserRole } from '../types';
 import { api } from '../services/api';
 import { Preferences } from '@capacitor/preferences';
-import { biometricService } from '../services/biometricService';
 import CustomSelect from './CustomSelect';
 
 interface AuthProps {
@@ -17,44 +16,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [hasBiometricSession, setHasBiometricSession] = useState(false);
-
-  useEffect(() => {
-    // Check if there's a saved biometric session the user can use to log in
-    biometricService.isBiometricsEnabled().then(enabled => setHasBiometricSession(enabled));
-  }, []);
-
-  const handleBiometricLogin = async () => {
-    setLoading(true); setError(null);
-    try {
-      const session = await biometricService.verifyAndRetrieveSession();
-      if (session) {
-        try {
-          // Verify with the backend if the token is still valid.
-          // This prevents deleted users from logging in via locally cached biometric credentials.
-          const freshData = await api.getProfile(session.token);
-          const freshProfile = freshData.profile;
-
-          // Re-store in plain preferences so the app session works normally with fresh data
-          await Preferences.set({ key: 'token', value: session.token });
-          await Preferences.set({ key: 'userProfile', value: JSON.stringify(freshProfile) });
-          onLogin(freshProfile, session.token);
-        } catch (apiErr: any) {
-           // If the token is invalid or the user is deleted, the backend will return a 401 or 404.
-           console.error("Biometric session invalid on backend:", apiErr);
-           await biometricService.disableBiometrics();
-           setHasBiometricSession(false);
-           setError('Your session is invalid or your account was deleted. Biometric login has been disabled.');
-        }
-      } else {
-        setError('Fingerprint scan failed or was canceled. Please use your password.');
-      }
-    } catch (e: any) {
-      setError('Biometric authentication failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Form States
   const [phone, setPhone] = useState('');
@@ -461,19 +422,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 {loading ? <Loader2 className="animate-spin" size={18} /> : 'Sign In'}
                 {!loading && <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
               </button>
-
-              {/* Fingerprint Login Button */}
-              {hasBiometricSession && (
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={handleBiometricLogin}
-                  className="w-full flex justify-center items-center gap-3 py-3.5 px-4 rounded-xl border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-[0.98]"
-                >
-                  <Fingerprint size={20} />
-                  Login with Fingerprint
-                </button>
-              )}
 
               <div className="text-center mt-12 pt-6 border-t border-gray-300 dark:border-gray-800">
                 <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">

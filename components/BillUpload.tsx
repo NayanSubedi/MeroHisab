@@ -103,6 +103,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
         const missing: string[] = [];
         if (!t.billNumber) missing.push('Bill No.');
         if (!t.partyPan) missing.push('PAN');
+        if (!t.date) missing.push('Date');
         return missing;
     };
 
@@ -247,6 +248,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
             if (result.vendorPan) setVendorPan(result.vendorPan);
             if (result.amount) setAmount(result.amount.toString());
             if (result.date) setDate(result.date);
+            else setDate('');
 
             const matchedCat = Object.values(ExpenseCategory).find(c => c.toLowerCase() === result.category?.toLowerCase());
             if (matchedCat) setCategory(matchedCat);
@@ -277,7 +279,7 @@ const BillUpload: React.FC<BillUploadProps> = ({
 
         const uploadTimestamp = new Date().toISOString();
 
-        const finalDate = await ensureAdDate(date);
+        const finalDate = date.trim() ? await ensureAdDate(date) : new Date().toISOString().split('T')[0];
 
         const newTransaction: Transaction = {
             id: Date.now().toString(),
@@ -458,12 +460,12 @@ const BillUpload: React.FC<BillUploadProps> = ({
                 {step === 2 && !isAnalyzing && imagePreview && (
                     <div className="p-6 bill-float-up">
                         {/* Compliance Alert */}
-                        {(!billNumber || !vendorPan) && (
+                        {(!billNumber || !vendorPan || !date) && (
                             <div className="mb-5 flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 bill-float-up">
                                 <Shield size={18} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                                 <div>
                                     <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Compliance Notice</p>
-                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Missing: {!billNumber && 'Bill Number'}{!billNumber && !vendorPan && ', '}{!vendorPan && 'Vendor PAN'}</p>
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Missing: {[!billNumber && 'Bill Number', !vendorPan && 'Vendor PAN', !date && 'Date'].filter(Boolean).join(', ')}</p>
                                 </div>
                             </div>
                         )}
@@ -509,8 +511,8 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                             <input required type="number" value={amount} onChange={e => setAmount(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-semibold" />
                                         </div>
                                         <div>
-                                            <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> Date</label>
-                                            <input required type="text" placeholder="e.g. 11/11/2082" value={date} onChange={e => setDate(e.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                                            <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> Date {!date && <span className="text-amber-500">(missing)</span>}</label>
+                                            <input type="text" placeholder="e.g. 11/11/2082" value={date} onChange={e => setDate(e.target.value)} className={`mt-1 block w-full rounded-xl border ${!date ? 'border-amber-400 dark:border-amber-600' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`} />
                                         </div>
                                     </div>
                                     <div>
@@ -588,10 +590,16 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                         {missing.length === 0 ? (
                                             <span className="shrink-0 w-2 h-2 rounded-full bg-green-500" title="Complete" />
                                         ) : (
-                                            <span className="shrink-0 w-2 h-2 rounded-full bg-amber-500" title={`Missing: ${missing.join(', ')}`} />
+                                            <span className="shrink-0 w-2 h-2 rounded-full bg-amber-500" />
                                         )}
                                     </div>
                                     <p className="text-[11px] text-gray-500">{(t.createdAt || t.date).split('T')[0]} · {t.category}</p>
+                                    {missing.length > 0 && (
+                                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                                            <AlertTriangle size={9} className="shrink-0" />
+                                            Missing: {missing.join(', ')}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="font-bold text-gray-900 dark:text-white text-sm">NPR {t.amount.toLocaleString()}</p>
@@ -649,7 +657,10 @@ const BillUpload: React.FC<BillUploadProps> = ({
                                                 {missing.length === 0 ? (
                                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"><CheckCircle size={10} /> Complete</span>
                                                 ) : (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" title={`Missing: ${missing.join(', ')}`}><AlertTriangle size={10} /> Incomplete</span>
+                                                    <div>
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"><AlertTriangle size={10} /> Incomplete</span>
+                                                        <p className="text-[9px] text-amber-600 dark:text-amber-400 mt-1 pl-0.5">Missing: {missing.join(', ')}</p>
+                                                    </div>
                                                 )}
                                             </td>
                                             <td className="px-5 py-3.5 text-right text-sm font-bold text-gray-900 dark:text-white">NPR {t.amount.toLocaleString()}</td>

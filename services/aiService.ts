@@ -8,8 +8,8 @@ export interface ExtractedBillData {
   category: string | null;
 }
 
-// ⚠️ CHANGES EVERY COLAB / CELL 8 RESTART — update this one line
-const NGROK_BASE = "https://inefficient-lael-substructural.ngrok-free.dev";
+
+const NGROK_BASE = (import.meta as any).env?.VITE_AI_SERVER_URL || "https://inefficient-lael-substructural.ngrok-free.dev";
 const CUSTOM_MODEL_API_URL = `${NGROK_BASE}/extract`;
 const CONVERT_DATE_URL = `${NGROK_BASE}/convert-date`;
 
@@ -167,5 +167,24 @@ export const analyzeBillImage = async (base64Image: string): Promise<ExtractedBi
   } catch (error) {
     console.error("AI Analysis Execution Failed:", error);
     throw error; // BillUpload.tsx handles alert
+  }
+};
+
+const LOCAL_AI_URL = "http://127.0.0.1:8000/forecast";
+
+export const fetchAIForecast = async (businessId: string, steps: number, granularity: string) => {
+  try {
+    const res = await fetch(LOCAL_AI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ businessId, steps, granularity })
+    });
+    if (!res.ok) {
+      throw new Error(`Local AI error: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.warn("Forecast fetch failed:", error);
+    throw error;
   }
 };

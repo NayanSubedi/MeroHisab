@@ -3,7 +3,6 @@ import { BusinessProfile } from '../types';
 import { api } from '../services/api';
 import { Save, Lock, User, Building, MapPin, CheckCircle, AlertCircle, Camera, Fingerprint, Loader2, Shield, Settings, ChevronRight } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
-import { biometricService } from '../services/biometricService';
 import CustomSelect from './CustomSelect';
 
 interface ProfileSettingsProps {
@@ -16,37 +15,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Biometric State
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
-
-  useEffect(() => {
-    biometricService.isAvailable().then(avail => setIsBiometricsAvailable(avail));
-    biometricService.isBiometricsEnabled().then(enabled => setBiometricEnabled(enabled));
-  }, []);
-
-  const toggleBiometrics = async () => {
-    if (biometricEnabled) {
-      // Disabling: restore token to plain Preferences so session persists
-      await Preferences.set({ key: 'token', value: token });
-      await Preferences.set({ key: 'userProfile', value: JSON.stringify(userProfile) });
-      await biometricService.disableBiometrics();
-      setBiometricEnabled(false);
-      setMessage({ type: 'success', text: 'App Lock is now disabled.' });
-    } else {
-      const enabled = await biometricService.enableBiometrics(token, userProfile);
-      if (enabled) {
-        setBiometricEnabled(true);
-        setMessage({ type: 'success', text: 'App Lock enabled! Your fingerprint is required on launch.' });
-        // Remove plain-text session now that it's in the secure enclave
-        await Preferences.remove({ key: 'token' });
-        await Preferences.remove({ key: 'userProfile' });
-      } else {
-        setMessage({ type: 'error', text: 'Fingerprint scan canceled or failed. App Lock was not enabled.' });
-      }
-    }
-  };
 
   // Business Info State
   const [businessName, setBusinessName] = useState(userProfile.name);
@@ -199,28 +167,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, token, o
                 className={inputClass}
               />
             </div>
-            
-            {/* Biometric Toggle */}
-            {isBiometricsAvailable && (
-              <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                     <Fingerprint size={16} className="text-gray-500" />
-                     <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">App Lock</h4>
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-1">Require fingerprint on app launch.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={toggleBiometrics}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${biometricEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${biometricEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-            )}
           </div>
-
 
           {/* Tax Info (read-only) */}
           <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-300 dark:border-gray-700">

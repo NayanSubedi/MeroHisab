@@ -1,47 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Dainikhisab </title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Dainikhisab</title>
     <link rel="icon" type="image/png" href="/icon.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
-        darkMode: 'class',
+        darkMode: "class",
         theme: {
           extend: {
             colors: {
               gray: {
-                750: '#2d3748',
-                850: '#1a202c',
-                950: '#0d1117',
-              }
-            }
-          }
-        }
-      }
+                750: "#2d3748",
+                850: "#1a202c",
+                950: "#0d1117",
+              },
+            },
+          },
+        },
+      };
     </script>
     <script>
       // Immediately set theme to avoid FOUC
-      (function() {
+      (function () {
         try {
-          const localTheme = localStorage.getItem('theme');
-          const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          
-          if (localTheme === 'dark' || (!localTheme && systemTheme)) {
-            document.documentElement.classList.add('dark');
+          const localTheme = localStorage.getItem("theme");
+          const systemTheme = window.matchMedia(
+            "(prefers-color-scheme: dark)",
+          ).matches;
+
+          if (localTheme === "dark" || (!localTheme && systemTheme)) {
+            document.documentElement.classList.add("dark");
           } else {
-            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.remove("dark");
           }
         } catch (e) {}
       })();
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+      referrerpolicy="no-referrer"
+    ></script>
     <style>
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: "Inter", sans-serif;
         /* Handle safe area for mobile notches */
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
@@ -50,12 +61,12 @@
       }
       /* Hide scrollbar for Chrome, Safari and Opera */
       .no-scrollbar::-webkit-scrollbar {
-          display: none;
+        display: none;
       }
       /* Hide scrollbar for IE, Edge and Firefox */
       .no-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
       }
       /* Form Validation Helper */
       .was-validated input:invalid,
@@ -65,33 +76,10 @@
         box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2) !important;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "recharts": "https://esm.sh/recharts@^2.12.0",
-    "react-dom/": "https://esm.sh/react-dom@^18.2.0/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.344.0",
-    "react/": "https://esm.sh/react@^18.2.0/",
-    "react": "https://esm.sh/react@^18.2.0",
-    "cors": "https://esm.sh/cors@^2.8.5",
-    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.2",
-    "express": "https://esm.sh/express@^4.18.2",
-    "bcryptjs": "https://esm.sh/bcryptjs@^2.4.3",
-    "@prisma/client": "https://esm.sh/@prisma/client@^5.10.0",
-    "path": "https://esm.sh/path-browserify",
-    "fs": "https://esm.sh/browserify-fs",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^4.2.1",
-    "@capacitor/cli": "https://esm.sh/@capacitor/cli@^5.7.0",
-    "vite": "https://esm.sh/vite@^5.1.4",
-    "@google/genai": "https://esm.sh/@google/genai@^0.1.1",
-    "@capacitor/core": "https://esm.sh/@capacitor/core@^5.7.0",
-    "@capacitor/camera": "https://esm.sh/@capacitor/camera@^5.0.0",
-    "@capacitor-community/native-biometric": "https://esm.sh/@capacitor-community/native-biometric@^5.0.0"
-  }
-}
-</script>
-</head>
-  <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
+  </head>
+  <body
+    class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200"
+  >
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
   </body>

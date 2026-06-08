@@ -4,34 +4,18 @@
 // IMPORTANT FOR RENDER DEPLOYMENT:
 // ---------------------------------------------------------------------------
 
-const PROD_URL = 'http://localhost:5000'; 
-
-// Fallback for local development
-const LOCAL_IP = '192.168.1.64'; // Your local computer IP
-const PORT = '5000';
-
-// Logic to select and sanitize the correct URL
-const isRenderUrlConfigured = PROD_URL.includes('onrender.com') && !PROD_URL.includes('your-app-name');
-
-let baseUrl = `http://${LOCAL_IP}:${PORT}/api`;
-
-if (isRenderUrlConfigured) {
-    baseUrl = PROD_URL;
-}
-
-// 1. Determine base URL (Env > Render Config > Local Fallback)
+const baseUrl = 'http://localhost:5000/api';
 let determinedUrl = (import.meta as any).env?.VITE_API_URL || baseUrl;
 
-// 2. Sanitize: Remove trailing slashes
+// Sanitize: Remove trailing slashes
 determinedUrl = determinedUrl.replace(/\/+$/, '');
 
-// 3. FORCE append /api if not present
+// FORCE append /api if not present
 if (!determinedUrl.endsWith('/api')) {
     determinedUrl = `${determinedUrl}/api`;
 }
 
 const API_URL = determinedUrl;
-
 console.log("FINAL API URL:", API_URL);
 
 const handleResponse = async (response: Response) => {

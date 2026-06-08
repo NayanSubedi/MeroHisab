@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Transaction, TransactionType } from '../types';
+import { fetchAIForecast } from '../services/aiService';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ComposedChart, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, BarChart, Bar
 } from 'recharts';
 import { Filter, TrendingUp, DollarSign, TrendingDown, Percent, ArrowUpRight, ArrowDownRight, Activity, Zap, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
@@ -11,31 +12,14 @@ interface ReportsProps {
 }
 
 type DateFilterType = 'all' | 'today' | 'week' | 'month' | 'year';
-type Granularity = 'weekly' | 'monthly' | 'yearly';
+type Granularity = 'weekly' | 'monthly';
 
 /* ===================== FORECAST HELPERS ===================== */
 
-function holt(series: number[], steps: number, alpha = 0.5, beta = 0.3): number[] {
-  if (series.length === 0) return Array(steps).fill(0);
-  if (series.length === 1) return Array(steps).fill(series[0]);
 
-  let level = series[0];
-  let trend = series[1] - series[0];
-
-  for (let i = 1; i < series.length; i++) {
-    const prev = level;
-    level = alpha * series[i] + (1 - alpha) * (level + trend);
-    trend = beta * (level - prev) + (1 - beta) * trend;
-  }
-
-  return Array.from({ length: steps }, (_, h) =>
-    Math.round(level + (h + 1) * trend)
-  );
-}
 
 function periodKey(d: Date, g: Granularity): string {
   const y = d.getFullYear();
-  if (g === 'yearly') return `${y}`;
   if (g === 'monthly') return `${y}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   const s = new Date(d);
   s.setDate(d.getDate() - d.getDay());
@@ -44,7 +28,6 @@ function periodKey(d: Date, g: Granularity): string {
 }
 
 function labelFromKey(key: string, g: Granularity): string {
-  if (g === 'yearly') return key;
   if (g === 'monthly') {
     const [y, m] = key.split('-').map(Number);
     return new Date(y, m - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
@@ -54,7 +37,6 @@ function labelFromKey(key: string, g: Granularity): string {
 }
 
 function futureLabel(lastKey: string, g: Granularity, offset: number): string {
-  if (g === 'yearly') return `${parseInt(lastKey, 10) + offset}`;
   if (g === 'monthly') {
     const [y, m] = lastKey.split('-').map(Number);
     const d = new Date(y, m - 1 + offset, 1);
@@ -66,7 +48,7 @@ function futureLabel(lastKey: string, g: Granularity, offset: number): string {
   return nd.toLocaleDateString('default', { month: 'short', day: 'numeric' });
 }
 
-const STEPS: Record<Granularity, number> = { weekly: 4, monthly: 3, yearly: 2 };
+const STEPS: Record<Granularity, number> = { weekly: 4, monthly: 3 };
 
 /* ===================== CUSTOM TOOLTIP ===================== */
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -158,46 +140,64 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
   }, [filteredTransactions]);
 
   /* ---------- Forecast ---------- */
-  const forecastData = useMemo(() => {
-    const buckets = new Map<string, { income: number; expense: number }>();
-    transactions.forEach(t => {
-      const key = periodKey(new Date(t.date), granularity);
-      if (!buckets.has(key)) buckets.set(key, { income: 0, expense: 0 });
-      const b = buckets.get(key)!;
-      if (t.type === TransactionType.SALES) b.income += t.amount;
-      else b.expense += t.amount;
-    });
+  const [forecastData, setForecastData] = useState<{ future: any[], chart: any[], hasData: boolean, loading: boolean }>({ future: [], chart: [], hasData: false, loading: false });
 
-    const sortedKeys = Array.from(buckets.keys()).sort();
-    if (sortedKeys.length === 0) return { future: [], chart: [], hasData: false };
+  useEffect(() => {
+    let active = true;
+    const fetchForecastData = async () => {
+      const buckets = new Map<string, { income: number; expense: number }>();
+      transactions.forEach(t => {
+        const key = periodKey(new Date(t.date), granularity);
+        if (!buckets.has(key)) buckets.set(key, { income: 0, expense: 0 });
+        const b = buckets.get(key)!;
+        if (t.type === TransactionType.SALES) b.income += t.amount;
+        else b.expense += t.amount;
+      });
 
-    const incomes = sortedKeys.map(k => buckets.get(k)!.income);
-    const expensesArr = sortedKeys.map(k => buckets.get(k)!.expense);
+      const sortedKeys = Array.from(buckets.keys()).sort();
+      if (sortedKeys.length === 0) {
+        if (active) setForecastData({ future: [], chart: [], hasData: false, loading: false });
+        return;
+      }
 
-    const steps = STEPS[granularity];
-    const fInc = holt(incomes, steps);
-    const fExp = holt(expensesArr, steps);
+      if (active) setForecastData(prev => ({ ...prev, loading: true }));
 
-    const lastKey = sortedKeys[sortedKeys.length - 1];
+      const incomes = sortedKeys.map(k => buckets.get(k)!.income);
+      const expensesArr = sortedKeys.map(k => buckets.get(k)!.expense);
+      const steps = STEPS[granularity];
+      const lastKey = sortedKeys[sortedKeys.length - 1];
 
-    const hist = sortedKeys.slice(-6).map(k => ({
-      label: labelFromKey(k, granularity),
-      income: Math.round(buckets.get(k)!.income),
-      expense: Math.round(buckets.get(k)!.expense),
-      net: Math.round(buckets.get(k)!.income - buckets.get(k)!.expense),
-      type: 'actual' as const,
-    }));
+      try {
+        const result = await fetchAIForecast(incomes, expensesArr, steps, granularity);
+        if (!active) return;
 
-    const future = fInc.map((inc, i) => ({
-      label: futureLabel(lastKey, granularity, i + 1),
-      income: Math.max(0, fInc[i]),
-      expense: Math.max(0, fExp[i]),
-      net: fInc[i] - fExp[i],
-      type: 'forecast' as const,
-    }));
+        const fInc = result.future_incomes;
+        const fExp = result.future_expenses;
 
-    const chart = [...hist, ...future];
-    return { future, chart, hasData: true };
+        const hist = sortedKeys.slice(-6).map(k => ({
+          label: labelFromKey(k, granularity),
+          income: Math.round(buckets.get(k)!.income),
+          expense: Math.round(buckets.get(k)!.expense),
+          net: Math.round(buckets.get(k)!.income - buckets.get(k)!.expense),
+          type: 'actual' as const,
+        }));
+
+        const future = fInc.map((inc: number, i: number) => ({
+          label: futureLabel(lastKey, granularity, i + 1),
+          income: Math.round(fInc[i]),
+          expense: Math.round(fExp[i]),
+          net: Math.round(fInc[i] - fExp[i]),
+          type: 'forecast' as const,
+        }));
+
+        const chart = [...hist, ...future];
+        setForecastData({ future, chart, hasData: true, loading: false });
+      } catch (err) {
+        if (active) setForecastData({ future: [], chart: [], hasData: false, loading: false });
+      }
+    };
+    fetchForecastData();
+    return () => { active = false; };
   }, [transactions, granularity]);
 
   const COLORS = [
@@ -531,7 +531,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
             </div>
           </div>
           <div className="flex gap-1.5">
-            {(['weekly', 'monthly', 'yearly'] as Granularity[]).map(g => (
+            {(['weekly', 'monthly'] as Granularity[]).map(g => (
               <button
                 key={g}
                 onClick={() => setGranularity(g)}
@@ -548,12 +548,17 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
         </div>
 
         <div className="px-5 pb-5">
-          {forecastData.hasData ? (
+          {forecastData.loading ? (
+            <div className="h-56 flex flex-col items-center justify-center text-indigo-400 text-sm gap-3">
+              <Zap size={28} className="animate-pulse text-indigo-500" />
+              <p className="font-semibold text-gray-600 dark:text-gray-300">Generating AI Projections...</p>
+            </div>
+          ) : forecastData.hasData ? (
             <div className="space-y-4">
               {/* Forecast Chart */}
               <div className="h-56 w-full bg-white/50 dark:bg-gray-900/30 rounded-xl p-3">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={forecastData.chart} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                  <ComposedChart data={forecastData.chart} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="fcIncome" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
@@ -572,7 +577,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
                     <Area type="monotone" dataKey="income" name="Revenue" stroke="#10B981" strokeWidth={2} fill="url(#fcIncome)" />
                     <Area type="monotone" dataKey="expense" name="Expense" stroke="#EF4444" strokeWidth={2} fill="url(#fcExpense)" />
                     <Line type="monotone" dataKey="net" name="Net" stroke="#6366F1" strokeWidth={2.5} dot={false} strokeDasharray="5 5" />
-                  </AreaChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
 

@@ -17,12 +17,12 @@ import { BusinessProfile, Transaction, UserRole, User } from './types';
 import { Loader2 } from 'lucide-react';
 import { api } from './services/api';
 import { Preferences } from '@capacitor/preferences';
-import { biometricService } from './services/biometricService';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [sessionExpiredAlert, setSessionExpiredAlert] = useState(false);
+  const [genericAlert, setGenericAlert] = useState<{isOpen: boolean, message: string, title?: string, type?: 'danger'|'warning'|'info'}>({ isOpen: false, message: '' });
   const [userProfile, setUserProfile] = useState<BusinessProfile | null>(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [token, setToken] = useState<string>('');
@@ -96,27 +96,10 @@ const App: React.FC = () => {
         let finalToken = null;
         let finalProfileString = null;
 
-        // --- BIOMETRIC CHECK ---
-        const bioEnabled = await biometricService.isBiometricsEnabled();
-        let biometricUsed = false;
-
-        if (bioEnabled) {
-          // Trigger biometric prompt
-          const bioSession = await biometricService.verifyAndRetrieveSession();
-          if (bioSession) {
-             finalToken = bioSession.token;
-             finalProfileString = JSON.stringify(bioSession.userProfile);
-             biometricUsed = true;
-          } else {
-             handleLogout();
-             return; 
-          }
-        } else {
-          const { value: storedToken } = await Preferences.get({ key: 'token' });
-          const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
-          finalToken = storedToken;
-          finalProfileString = storedProfile;
-        }
+        const { value: storedToken } = await Preferences.get({ key: 'token' });
+        const { value: storedProfile } = await Preferences.get({ key: 'userProfile' });
+        finalToken = storedToken;
+        finalProfileString = storedProfile;
 
         if (finalToken && finalProfileString) {
           let latestProfile = JSON.parse(finalProfileString);
@@ -126,14 +109,8 @@ const App: React.FC = () => {
              const freshData = await api.getProfile(finalToken);
              latestProfile = freshData.profile;
              await Preferences.set({ key: 'userProfile', value: JSON.stringify(latestProfile) });
-             
-             // Update biometric vault too if it was used
-             if (biometricUsed) {
-                await biometricService.enableBiometrics(finalToken, latestProfile);
-             }
           } catch (profileErr) {
              console.error("Session verification failed on mount:", profileErr);
-             if (biometricUsed) await biometricService.disableBiometrics();
              handleLogout();
              return;
           }
@@ -204,9 +181,8 @@ const App: React.FC = () => {
     try {
       const savedTransaction = await api.createTransaction(t, token);
       setTransactions(prev => [savedTransaction, ...prev]);
-      alert("Transaction Saved!");
     } catch (e: any) {
-      alert(`Failed to save transaction: ${e.message || 'Unknown error'}`);
+      setGenericAlert({ isOpen: true, title: "Failed to Save", message: e.message || 'Unknown error', type: 'danger' });
     }
   };
 
@@ -215,7 +191,7 @@ const App: React.FC = () => {
       await api.deleteTransaction(id, token);
       setTransactions(prev => prev.filter(t => t.id !== id));
     } catch (e: any) {
-      alert("Failed to delete transaction: " + e.message);
+      setGenericAlert({ isOpen: true, title: "Failed to Delete", message: e.message || 'Unknown error', type: 'danger' });
     }
   };
 
@@ -224,7 +200,7 @@ const App: React.FC = () => {
       const updated = await api.updateTransaction(data.id, data, token);
       setTransactions(prev => prev.map(t => t.id === data.id ? { ...t, ...updated } : t));
     } catch (e: any) {
-      alert("Failed to update transaction: " + e.message);
+      setGenericAlert({ isOpen: true, title: "Failed to Update", message: e.message || 'Unknown error', type: 'danger' });
     }
   };
 
@@ -315,6 +291,15 @@ const App: React.FC = () => {
         confirmText="Okay"
         onConfirm={() => setSessionExpiredAlert(false)}
         onCancel={() => setSessionExpiredAlert(false)}
+      />
+      <CustomConfirm
+        isOpen={genericAlert.isOpen}
+        title={genericAlert.title || "Notice"}
+        message={genericAlert.message}
+        type={genericAlert.type || "info"}
+        confirmText="Okay"
+        onConfirm={() => setGenericAlert({ ...genericAlert, isOpen: false })}
+        onCancel={() => setGenericAlert({ ...genericAlert, isOpen: false })}
       />
     </>
   );
